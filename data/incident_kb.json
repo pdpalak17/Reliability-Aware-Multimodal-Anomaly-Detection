@@ -1,0 +1,52 @@
+[
+  {
+    "id": "INC-101",
+    "category": "Fall",
+    "description": "Individual collapsed suddenly in Zone-2 main hallway during low illumination. Rapid posture keypoint trajectory downward detected.",
+    "primary_modality": "Body Pose & Video Dynamics",
+    "zone": "Zone-2 (Main Hallway)",
+    "lighting": "Low",
+    "crowd_density": "Low",
+    "recommended_action": "Dispatch medical team to Zone-2 immediately."
+  },
+  {
+    "id": "INC-102",
+    "category": "Fighting",
+    "description": "Physical altercations between two individuals in Zone-1 courtyard. Rapid arm movement, elevated motion velocity, angry facial features.",
+    "primary_modality": "Video Dynamics & Facial Expression",
+    "zone": "Zone-1 (Outdoor Courtyard)",
+    "lighting": "Normal",
+    "crowd_density": "Medium",
+    "recommended_action": "Alert campus security officers to resolve outdoor courtyard conflict."
+  },
+  {
+    "id": "INC-103",
+    "category": "Panic",
+    "description": "Sudden crowd dispersion and erratic running movement detected in Zone-4 lobby area during peak hours.",
+    "primary_modality": "Video Dynamics & Context",
+    "zone": "Zone-4 (Lobby Entrance)",
+    "lighting": "Normal",
+    "crowd_density": "High",
+    "recommended_action": "Review lobby live feed and notify floor safety manager."
+  },
+  {
+    "id": "INC-104",
+    "category": "Loitering",
+    "description": "Single individual remaining motionless near restricted server room door in Zone-3 for over 15 minutes during late night hours.",
+    "primary_modality": "Context & Body Pose",
+    "zone": "Zone-3 (Restricted Server Corridor)",
+    "lighting": "Low",
+    "crowd_density": "Zero",
+    "recommended_action": "Send security patrol to check server corridor."
+  },
+  {
+    "id": "INC-105",
+    "category": "Normal",
+    "description": "Routine pedestrian movement in Zone-1. Facial expressions neutral/happy, posture upright, velocity within baseline limits.",
+    "primary_modality": "All Modalities Normal",
+    "zone": "Zone-1 (Outdoor Courtyard)",
+    "lighting": "Bright",
+    "crowd_density": "Medium",
+    "recommended_action": "No alert required. Normal activity logged."
+  }
+]
