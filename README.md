@@ -147,25 +147,3 @@ Reliability-Aware-Multimodal-Anomaly-Detection/
 └── docs/                       # Project Documentation & Presentations
 ```
 
----
-
-## 👥 Authors & Acknowledgments
-
-- **Authors:** Palak Dwivedi, T. Sri Vaishnavi, Ojashwini Dubey, Spoorthi Reddy, Tiasha Roy
-- **Supervisor:** Dr. Uday Chandra
-- **Institution:** Woxsen University, School of Technology
-
----
-
-## 📜 License & Citation
-
-This project is licensed under the MIT License. If you use this repository in your research, please cite:
-
-```bibtex
-@article{dwivedi2026reliability,
-  title={Reliability-Aware Contextual Multimodal Anomaly Detection in Surveillance Streams},
-  author={Dwivedi, Palak and Vaishnavi, T. Sri and Dubey, Ojashwini and Reddy, Spoorthi and Roy, Tiasha and Chandra, Uday},
-  journal={Woxsen University School of Technology Research Proceedings},
-  year={2026}
-}
-```
