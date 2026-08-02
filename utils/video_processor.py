@@ -154,7 +154,7 @@ class SurveillanceVideoProcessor:
                 num_persons = 1 if frame_np is not None else (3 if anomaly_type == "Normal" else 2)
 
         persons_data = self._generate_default_persons_data(anomaly_type, is_occluded, prob, num_persons=num_persons)
-        annotated_img = self.process_multi_person_frame(
+        annotated_img, updated_persons_data = self.process_multi_person_frame(
             frame_np,
             persons_data=persons_data,
             anomaly_type=anomaly_type,
@@ -163,7 +163,7 @@ class SurveillanceVideoProcessor:
             reliability=reliability,
             num_persons=num_persons
         )
-        return annotated_img, persons_data[:num_persons]
+        return annotated_img, updated_persons_data
 
     def process_multi_person_frame(self, frame_np, persons_data=None, anomaly_type="Normal", is_occluded=False, prob=0.1, reliability=0.9, num_persons=None):
         if frame_np is None or frame_np.size == 0:
@@ -207,7 +207,6 @@ class SurveillanceVideoProcessor:
             role = p.get('role', f'Person {p_id}')
             emotion = p.get('emotion', 'Neutral')
             emotion_conf = p.get('emotion_conf', 0.85)
-            # Ensure emotion_conf is a float between 0.0 and 1.0
             if emotion_conf > 1.0:
                 emotion_conf = emotion_conf / 100.0
 
@@ -243,17 +242,16 @@ class SurveillanceVideoProcessor:
                 l_ankle = (lms[27]['x'], lms[27]['y'])
 
                 # Real-time Keypoint Gesture & Threat Analysis
-                # Check for raised arms (holding weapon / crowbar / aggressive stance)
-                is_arm_raised = (r_wrist[1] < r_shoulder[1] + 15) or (l_wrist[1] < l_shoulder[1] + 15) or (r_wrist[1] < nose[1] + 25) or (l_wrist[1] < nose[1] + 25)
+                is_arm_raised = (r_wrist[1] < r_shoulder[1] + 25) or (l_wrist[1] < l_shoulder[1] + 25) or (r_wrist[1] < nose[1] + 35) or (l_wrist[1] < nose[1] + 35)
                 is_collapsed = (r_shoulder[1] > h * 0.65) or (abs(r_shoulder[1] - r_hip[1]) < h * 0.15)
 
                 if is_arm_raised:
-                    p['action'] = "Aggressive / Weapon Stance"
+                    p['action'] = "Aggressive / Screaming"
                     p['pose_type'] = "Aggressive"
-                    p['emotion'] = "Angry / Threat" if not is_occluded else "Masked / Threat"
+                    p['emotion'] = "Angry"
                     p['risk'] = 0.94
-                    p['emotion_dict']['Angry'] = 0.88
-                    p['emotion_dict']['Neutral'] = 0.02
+                    p['emotion_dict']['Angry'] = 0.89
+                    p['emotion_dict']['Neutral'] = 0.03
                     p_risk = 0.94
                     p_color = color_alert
                 elif is_collapsed:
@@ -282,14 +280,14 @@ class SurveillanceVideoProcessor:
                     face_crop = frame_np[min_y:max_y, min_x:max_x]
                     if face_crop.size > 0:
                         fc_h, fc_w = face_crop.shape[:2]
-                        mouth_region = face_crop[int(fc_h * 0.55):fc_h, :]
+                        mouth_region = face_crop[int(fc_h * 0.50):fc_h, :]
                         if mouth_region.size > 0:
                             gray_mouth = np.mean(mouth_region, axis=2)
-                            dark_mouth_ratio = np.mean(gray_mouth < 65)
+                            dark_mouth_ratio = np.mean(gray_mouth < 75)
                             mouth_std = np.std(gray_mouth)
 
                             # Detect screaming / wide open mouth / aggressive yelling
-                            if dark_mouth_ratio > 0.08 or mouth_std > 38.0 or is_arm_raised:
+                            if dark_mouth_ratio > 0.05 or mouth_std > 30.0 or is_arm_raised:
                                 p['emotion'] = "Angry"
                                 p['action'] = "Aggressive / Screaming"
                                 p['emotion_conf'] = 0.89
@@ -297,14 +295,11 @@ class SurveillanceVideoProcessor:
                                 p['emotion_dict'] = {'Angry': 0.89, 'Disgust': 0.05, 'Neutral': 0.04, 'Fear': 0.02}
                                 p_risk = 0.94
                                 p_color = color_alert
-
-                # NOTE: Skeleton stick structure removed per user request for clean output.
             else:
                 # Proportional Fallback positioning
                 if detected_faces and i < len(detected_faces):
                     df = detected_faces[i]
                     f_box = [df[0], df[1], df[2], df[3]]
-                    # Face crop expression check for auto-detected faces
                     y1, y2, x1, x2 = max(0, df[1]), min(h, df[3]), max(0, df[0]), min(w, df[2])
                     if y2 > y1 and x2 > x1:
                         face_crop = frame_np[y1:y2, x1:x2]
@@ -313,9 +308,9 @@ class SurveillanceVideoProcessor:
                             mouth_region = face_crop[int(fc_h * 0.50):fc_h, :]
                             if mouth_region.size > 0:
                                 gray_mouth = np.mean(mouth_region, axis=2)
-                                dark_mouth_ratio = np.mean(gray_mouth < 65)
+                                dark_mouth_ratio = np.mean(gray_mouth < 75)
                                 mouth_std = np.std(gray_mouth)
-                                if dark_mouth_ratio > 0.07 or mouth_std > 36.0:
+                                if dark_mouth_ratio > 0.05 or mouth_std > 30.0:
                                     p['emotion'] = "Angry"
                                     p['action'] = "Aggressive / Screaming"
                                     p['emotion_conf'] = 0.89
@@ -332,23 +327,29 @@ class SurveillanceVideoProcessor:
                     f_box = [max(5, cx - box_w), max(5, cy_head - int(box_h * 0.5)),
                              min(w - 5, cx + box_w), min(h - 5, cy_head + int(box_h * 0.5))]
 
-            # Render Face Bounding Box & Emotion Tag (formatted correctly as percentage!)
-            pct_val = int(round(emotion_conf * 100))
+            # Render Face Bounding Box & Emotion Tag
+            emotion_label = p.get('emotion', emotion)
+            pct_val = int(round(p.get('emotion_conf', emotion_conf) * 100))
             if is_occluded and i == 0:
                 draw.rectangle(f_box, outline=(156, 163, 175), width=2)
                 draw.text((f_box[0], max(0, f_box[1] - 16)), f"P{p_id}: OCCLUDED", fill=(209, 213, 219))
             else:
                 draw.rectangle(f_box, outline=p_color, width=2)
-                emo_label = f"P{p_id}: {emotion.upper()} ({pct_val}%)"
+                emo_label = f"P{p_id}: {emotion_label.upper()} ({pct_val}%)"
                 tag_y = max(0, f_box[1] - 18)
                 tag_width = len(emo_label) * 6 + 10
                 draw.rectangle([f_box[0], tag_y, f_box[0] + tag_width, f_box[1]], fill=(15, 23, 42))
                 draw.text((f_box[0] + 4, tag_y + 2), emo_label, fill=p_color)
 
+        # Dynamic Risk Metric calculation
+        max_person_risk = max([p.get('risk', prob) for p in persons_data[:num_persons]]) if persons_data else prob
+        effective_prob = max(prob, max_person_risk)
+        effective_category = "Physical Fighting / Aggression" if effective_prob > 0.60 else anomaly_type
+
         # Top HUD Ribbon Header
         draw.rectangle([(0, 0), (w, 36)], fill=(15, 23, 42))
-        top_text = f"SCENE: {anomaly_type.upper()} | DETECTED PERSONS: {len(persons_data[:num_persons])} | ANOMALY RISK: {int(prob*100)}% | RELIABILITY: {int(reliability*100)}%"
-        status_color = color_alert if prob > 0.5 else color_normal
+        top_text = f"SCENE: {effective_category.upper()} | DETECTED PERSONS: {len(persons_data[:num_persons])} | ANOMALY RISK: {int(effective_prob*100)}% | RELIABILITY: {int(reliability*100)}%"
+        status_color = color_alert if effective_prob > 0.5 else color_normal
         draw.text((12, 10), top_text, fill=status_color)
 
         # Bottom HUD Ribbon Bar
@@ -356,7 +357,7 @@ class SurveillanceVideoProcessor:
         poses_summary = ", ".join([f"P{p['id']}:{p.get('pose_type','Standing')}" for p in persons_data[:num_persons]])
         draw.text((12, h - 20), f"COMPUTER VISION ENGINE: MediaPipe 33-Landmarks & Facial Emotion [{poses_summary}]", fill=color_cyan)
 
-        return np.array(img)
+        return np.array(img), persons_data[:num_persons]
 
     def _draw_person_skeleton(self, draw, cx, cy_head, w, h, pose_type, p_color, color_joint, color_line):
         body_scale = max(0.6, min(1.5, h / 480.0))
