@@ -37,35 +37,35 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Handcrafted Bright, Crisp, Premium SaaS Design System (Apple / Arc / Notion / Vercel Aesthetic)
+# Off-White Warm SaaS Design System (Apple / Arc / Notion Aesthetic)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
-    /* Global Base & Bright Palette */
-    html, body, [data-testid="stAppViewContainer"] {
-        background-color: #F8FAFC !important;
-        color: #0F172A !important;
+    /* Global Base & Off-White Background */
+    html, body, [data-testid="stAppViewContainer"], .stApp {
+        background-color: #F4F5F7 !important;
+        color: #1F2937 !important;
         font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
 
-    /* Ambient Mesh Gradient Main Background */
-    .stApp {
-        background: 
-            radial-gradient(at 10% 10%, rgba(59, 130, 246, 0.08) 0px, transparent 50%),
-            radial-gradient(at 90% 10%, rgba(139, 92, 246, 0.07) 0px, transparent 50%),
-            radial-gradient(at 50% 90%, rgba(6, 182, 212, 0.06) 0px, transparent 50%),
-            #F8FAFC !important;
+    /* Universal Text Color Enforcements for High Contrast Readability */
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {
+        color: #111827 !important;
+        font-weight: 700 !important;
+    }
+    .stApp p, .stApp span, .stApp label, .stApp div, [data-testid="stMarkdownContainer"] p {
+        color: #1F2937 !important;
     }
 
     /* Hero Banner Container */
     .hero-container {
         background: linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%);
         border: 1px solid #E2E8F0;
-        border-radius: 20px;
-        padding: 32px 28px;
+        border-radius: 18px;
+        padding: 28px 24px;
         margin-bottom: 24px;
-        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.05);
         position: relative;
         overflow: hidden;
     }
@@ -75,21 +75,19 @@ st.markdown("""
         right: -60px;
         width: 280px;
         height: 280px;
-        background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
         pointer-events: none;
     }
     .hero-title {
-        font-size: 2.4rem;
+        font-size: 2.3rem;
         font-weight: 800;
         letter-spacing: -0.03em;
-        background: linear-gradient(135deg, #0F172A 0%, #334155 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #0F172A !important;
         margin-bottom: 8px;
     }
     .hero-subtitle {
         font-size: 1.02rem;
-        color: #475569;
+        color: #475569 !important;
         font-weight: 500;
         max-width: 850px;
     }
@@ -112,28 +110,26 @@ st.markdown("""
         100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
     }
 
-    /* Premium SaaS Glass Card */
+    /* Premium Off-White Card */
     .saas-card {
-        background: rgba(255, 255, 255, 0.95);
-        border: 1px solid #E2E8F0;
-        border-radius: 16px;
-        padding: 22px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
-        backdrop-filter: blur(16px);
-        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        margin-bottom: 20px;
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 16px !important;
+        padding: 22px !important;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04) !important;
+        margin-bottom: 20px !important;
+        transition: all 0.2s ease !important;
     }
     .saas-card:hover {
-        border-color: #3B82F6;
-        transform: translateY(-3px);
-        box-shadow: 0 20px 35px -5px rgba(59, 130, 246, 0.12);
+        border-color: #3B82F6 !important;
+        box-shadow: 0 10px 25px -4px rgba(59, 130, 246, 0.12) !important;
     }
 
     /* Bright Badges */
     .badge-normal {
-        background: #DCFCE7;
-        color: #15803D;
-        border: 1px solid #86EFAC;
+        background: #DCFCE7 !important;
+        color: #15803D !important;
+        border: 1px solid #86EFAC !important;
         padding: 5px 14px;
         border-radius: 20px;
         font-size: 0.78rem;
@@ -143,9 +139,9 @@ st.markdown("""
         display: inline-block;
     }
     .badge-alert {
-        background: #FEE2E2;
-        color: #B91C1C;
-        border: 1px solid #FCA5A5;
+        background: #FEE2E2 !important;
+        color: #B91C1C !important;
+        border: 1px solid #FCA5A5 !important;
         padding: 5px 14px;
         border-radius: 20px;
         font-size: 0.78rem;
@@ -155,9 +151,9 @@ st.markdown("""
         display: inline-block;
     }
     .badge-info {
-        background: #DBEAFE;
-        color: #1D4ED8;
-        border: 1px solid #93C5FD;
+        background: #DBEAFE !important;
+        color: #1D4ED8 !important;
+        border: 1px solid #93C5FD !important;
         padding: 5px 14px;
         border-radius: 20px;
         font-size: 0.78rem;
@@ -177,33 +173,32 @@ st.markdown("""
     }
     .metric-label {
         font-size: 0.82rem;
-        color: #64748B;
+        color: #64748B !important;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.06em;
     }
-    .text-emerald { color: #16A34A; }
-    .text-rose { color: #DC2626; }
-    .text-amber { color: #D97706; }
-    .text-blue { color: #2563EB; }
+    .text-emerald { color: #16A34A !important; }
+    .text-rose { color: #DC2626 !important; }
+    .text-amber { color: #D97706 !important; }
+    .text-blue { color: #2563EB !important; }
 
     /* Modern Tabs Bar */
     .stTabs [data-baseweb="tab-list"] {
         gap: 6px;
-        background: #FFFFFF;
+        background: #FFFFFF !important;
         padding: 6px;
         border-radius: 14px;
-        border: 1px solid #E2E8F0;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        border: 1px solid #E2E8F0 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
     }
     .stTabs [data-baseweb="tab"] {
         height: 42px;
         padding: 0 20px;
         border-radius: 10px;
-        color: #64748B;
+        color: #475569 !important;
         font-weight: 600;
         font-size: 0.88rem;
-        transition: all 0.2s ease;
     }
     .stTabs [aria-selected="true"] {
         background: #3B82F6 !important;
@@ -213,8 +208,11 @@ st.markdown("""
 
     /* Custom Sidebar Styling */
     section[data-testid="stSidebar"] {
-        background-color: #FFFFFF !important;
+        background-color: #F8FAFC !important;
         border-right: 1px solid #E2E8F0 !important;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #1F2937 !important;
     }
     section[data-testid="stSidebar"] .stMarkdown h2, 
     section[data-testid="stSidebar"] .stMarkdown h3 {
