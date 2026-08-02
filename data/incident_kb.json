@@ -7,46 +7,76 @@
     "zone": "Zone-2 (Main Hallway)",
     "lighting": "Low",
     "crowd_density": "Low",
-    "recommended_action": "Dispatch medical team to Zone-2 immediately."
+    "recommended_action": "Dispatch medical response team to Zone-2 main hallway immediately."
   },
   {
     "id": "INC-102",
     "category": "Fighting",
-    "description": "Physical altercations between two individuals in Zone-1 courtyard. Rapid arm movement, elevated motion velocity, angry facial features.",
+    "description": "Physical altercations between two individuals in Zone-1 courtyard. Rapid arm movement, elevated motion velocity, aggressive facial gestures.",
     "primary_modality": "Video Dynamics & Facial Expression",
     "zone": "Zone-1 (Outdoor Courtyard)",
     "lighting": "Normal",
     "crowd_density": "Medium",
-    "recommended_action": "Alert campus security officers to resolve outdoor courtyard conflict."
+    "recommended_action": "Alert campus security personnel to intervene in outdoor courtyard conflict."
   },
   {
     "id": "INC-103",
     "category": "Panic",
-    "description": "Sudden crowd dispersion and erratic running movement detected in Zone-4 lobby area during peak hours.",
-    "primary_modality": "Video Dynamics & Context",
+    "description": "Sudden crowd dispersion and erratic running movement detected in Zone-4 lobby area during peak business hours.",
+    "primary_modality": "Video Dynamics & Context Metadata",
     "zone": "Zone-4 (Lobby Entrance)",
     "lighting": "Normal",
     "crowd_density": "High",
-    "recommended_action": "Review lobby live feed and notify floor safety manager."
+    "recommended_action": "Review lobby live feed, sound precautionary alert, and notify safety manager."
   },
   {
     "id": "INC-104",
     "category": "Loitering",
     "description": "Single individual remaining motionless near restricted server room door in Zone-3 for over 15 minutes during late night hours.",
-    "primary_modality": "Context & Body Pose",
+    "primary_modality": "Context Metadata & Body Pose",
     "zone": "Zone-3 (Restricted Server Corridor)",
     "lighting": "Low",
     "crowd_density": "Zero",
-    "recommended_action": "Send security patrol to check server corridor."
+    "recommended_action": "Send night security patrol to inspect restricted server corridor."
   },
   {
     "id": "INC-105",
     "category": "Normal",
-    "description": "Routine pedestrian movement in Zone-1. Facial expressions neutral/happy, posture upright, velocity within baseline limits.",
+    "description": "Routine pedestrian movement in Zone-1 outdoor courtyard. Neutral/happy facial expressions, upright posture, standard gait velocity.",
     "primary_modality": "All Modalities Normal",
     "zone": "Zone-1 (Outdoor Courtyard)",
     "lighting": "Bright",
     "crowd_density": "Medium",
-    "recommended_action": "No alert required. Normal activity logged."
+    "recommended_action": "No intervention needed. Activity logged under routine surveillance baseline."
+  },
+  {
+    "id": "INC-106",
+    "category": "Fall",
+    "description": "Elderly pedestrian slipped on wet floor near Zone-4 lobby entrance. Horizontal skeleton keypoints and abrupt velocity loss.",
+    "primary_modality": "Body Pose & Video Dynamics",
+    "zone": "Zone-4 (Lobby Entrance)",
+    "lighting": "Bright",
+    "crowd_density": "Medium",
+    "recommended_action": "Deploy first-aid responder and alert custodial crew for wet floor mitigation."
+  },
+  {
+    "id": "INC-107",
+    "category": "Fighting",
+    "description": "Aggressive confrontation in Zone-2 main corridor. Overlapping bounding boxes, elevated motion energy, angry facial features.",
+    "primary_modality": "Facial Expression & Body Pose",
+    "zone": "Zone-2 (Main Hallway)",
+    "lighting": "Normal",
+    "crowd_density": "High",
+    "recommended_action": "Dispatch hall monitors and notify security supervisor."
+  },
+  {
+    "id": "INC-108",
+    "category": "Loitering",
+    "description": "Suspicious lingering near perimeter fence in Zone-5 during 03:00 AM hours with occluded facial features.",
+    "primary_modality": "Context Metadata & Temporal Video",
+    "zone": "Zone-5 (Perimeter Fence)",
+    "lighting": "Dark",
+    "crowd_density": "Zero",
+    "recommended_action": "Activate perimeter floodlights and dispatch mobile security unit."
   }
 ]

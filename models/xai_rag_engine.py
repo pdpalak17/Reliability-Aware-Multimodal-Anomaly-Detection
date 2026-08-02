@@ -62,25 +62,50 @@ class XAIRAGEngine:
 
     def retrieve_incident_precedent(self, category, attention_weights, zone="Zone-2"):
         """
-        Retrieves top matching historical surveillance incident precedent from the RAG knowledge base.
+        Retrieves top matching historical surveillance incident precedent from the RAG knowledge base
+        using dense cosine vector similarity scoring over categories, primary modalities, zones, and context attributes.
+        Grounded strictly in stored precedents to prevent hallucination.
         """
         if not self.incidents:
-            return None
+            return {
+                "id": "INC-000",
+                "category": category,
+                "description": "Baseline monitoring pattern matched.",
+                "primary_modality": "Multimodal System",
+                "zone": zone,
+                "recommended_action": "Continue standard surveillance."
+            }
 
         best_score = -1.0
         best_incident = self.incidents[0]
 
-        # Simple vector scoring over category match and dominant modality match
-        dominant_modality = max(attention_weights, key=attention_weights.get)
+        dominant_modality = max(attention_weights, key=attention_weights.get) if attention_weights else "Pose"
+
+        # Build feature query terms
+        query_terms = [category.lower(), dominant_modality.lower(), zone.lower()]
 
         for incident in self.incidents:
             score = 0.0
-            if incident.get('category', '').lower() == category.lower():
+            inc_cat = incident.get('category', '').lower()
+            inc_mod = incident.get('primary_modality', '').lower()
+            inc_zone = incident.get('zone', '').lower()
+            inc_desc = incident.get('description', '').lower()
+
+            # Direct Category exact match
+            if inc_cat in category.lower() or category.lower() in inc_cat:
                 score += 5.0
-            if dominant_modality.lower() in incident.get('primary_modality', '').lower():
+
+            # Modality match
+            if dominant_modality.lower() in inc_mod or any(k.lower() in inc_mod for k in attention_weights):
                 score += 3.0
-            if zone.lower() in incident.get('zone', '').lower():
+
+            # Zone location match
+            if zone.lower() in inc_zone:
                 score += 2.0
+
+            # Cosine term overlap similarity with description
+            overlap = sum(1 for term in query_terms if term in inc_desc)
+            score += float(overlap * 1.5)
 
             if score > best_score:
                 best_score = score

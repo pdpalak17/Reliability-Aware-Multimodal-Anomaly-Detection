@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 import os
 import sys
+import tempfile
 
 # Add parent directory to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -14,6 +15,9 @@ from models.context_branch import ContextMetadataNetwork
 from models.attention_fusion import ContextAwareAttentionFusion
 from models.xai_rag_engine import XAIRAGEngine
 from utils.metrics import compute_multimodal_metrics
+from utils.xai_visualizer import XAIVisualizer
+from utils.incident_logger import IncidentLogger
+from utils.system_monitor import SystemMonitor
 
 class TestMultimodalAnomalyDetection(unittest.TestCase):
 
@@ -91,6 +95,71 @@ class TestMultimodalAnomalyDetection(unittest.TestCase):
         res = engine.generate_rag_alert(mock_det)
         self.assertIn('alert_text', res)
         self.assertIn('RAG Incident Precedent Match', res['alert_text'])
+
+    def test_xai_visualizer(self):
+        frame = np.ones((100, 100, 3), dtype=np.uint8) * 128
+        heatmap = np.random.uniform(0, 1, (100, 100))
+        blended = XAIVisualizer.apply_gradcam_overlay(frame, heatmap, alpha=0.5)
+        self.assertEqual(blended.shape, (100, 100, 3))
+
+        shap_scores = {'Face': 0.1, 'Pose': 0.5, 'Video': 0.3, 'Context': 0.1}
+        fig_shap = XAIVisualizer.create_shap_bar_chart(shap_scores)
+        self.assertIsNotNone(fig_shap)
+
+        fig_radar = XAIVisualizer.create_attention_radar_chart(shap_scores)
+        self.assertIsNotNone(fig_radar)
+
+    def test_incident_logger(self):
+        with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as tmp:
+            tmp_path = tmp.name
+
+        try:
+            logger = IncidentLogger(log_path=tmp_path)
+            evt = logger.log_incident(
+                anomaly_type="Sudden Fall / Collapse",
+                risk_prob=0.88,
+                reliability_score=0.92,
+                dominant_modality="Pose",
+                zone="Zone-2",
+                frame_idx=15,
+                rag_explanation="Fall detected."
+            )
+            self.assertEqual(evt["category"], "Sudden Fall / Collapse")
+            self.assertEqual(len(logger.history), 1)
+
+            df = logger.get_history_dataframe()
+            self.assertEqual(len(df), 1)
+
+            csv_str = logger.export_csv()
+            self.assertIn("Sudden Fall / Collapse", csv_str)
+
+            json_str = logger.export_json()
+            self.assertIn("EVT-", json_str)
+
+            html_str = logger.export_html_report()
+            self.assertIn("Surveillance Anomaly Report", html_str)
+
+            logger.clear_history()
+            self.assertEqual(len(logger.history), 0)
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    def test_system_monitor(self):
+        monitor = SystemMonitor()
+        fps = monitor.update_fps()
+        self.assertGreater(fps, 0)
+
+        hw = monitor.get_hardware_metrics()
+        self.assertIn("cpu_percent", hw)
+        self.assertIn("ram_percent", hw)
+        self.assertIn("ram_used_gb", hw)
+
+        gauge = monitor.create_gauge_chart(50, "Test Gauge")
+        self.assertIsNotNone(gauge)
+
+        latency_chart = monitor.create_latency_bar_chart()
+        self.assertIsNotNone(latency_chart)
 
 if __name__ == '__main__':
     unittest.main()

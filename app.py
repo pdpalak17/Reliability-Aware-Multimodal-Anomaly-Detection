@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -17,63 +18,150 @@ from models.video_branch import VideoTemporalCNNLSTM
 from models.context_branch import ContextMetadataNetwork
 from models.attention_fusion import ContextAwareAttentionFusion
 from models.xai_rag_engine import XAIRAGEngine
-import importlib
 import utils.video_processor
-importlib.reload(utils.video_processor)
 from utils.video_processor import SurveillanceVideoProcessor
+from utils.xai_visualizer import XAIVisualizer
+from utils.incident_logger import IncidentLogger
+from utils.system_monitor import SystemMonitor
 
 # Page Configuration
 st.set_page_config(
-    page_title="Reliability-Aware Multimodal Anomaly Detection",
+    page_title="Reliability-Aware Multimodal Anomaly Detection Platform",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS Styling
+# Custom Dark Mode & Glassmorphism CSS Styling
 st.markdown("""
 <style>
-    .main-header {
+    /* Global Base */
+    .stApp {
+        background-color: #0F172A;
+        color: #F8FAFC;
+    }
+    
+    /* Header Container */
+    .main-header-box {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        backdrop-filter: blur(10px);
+    }
+    .main-title {
+        font-size: 2.3rem;
+        font-weight: 800;
+        background: linear-gradient(90deg, #38BDF8 0%, #8B5CF6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 5px;
+    }
+    .sub-title {
+        font-size: 1.05rem;
+        color: #94A3B8;
+        font-weight: 500;
+    }
+
+    /* Glassmorphism Card Container */
+    .glass-card {
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 18px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        margin-bottom: 18px;
+        backdrop-filter: blur(12px);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .glass-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(56, 189, 248, 0.15);
+    }
+
+    /* Status Tags */
+    .normal-badge {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34D399;
+        border: 1px solid #10B981;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: inline-block;
+    }
+    .anomaly-badge {
+        background: rgba(239, 68, 68, 0.2);
+        color: #FCA5A5;
+        border: 1px solid #EF4444;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: inline-block;
+    }
+    .warning-badge {
+        background: rgba(245, 158, 11, 0.2);
+        color: #FDE047;
+        border: 1px solid #F59E0B;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        display: inline-block;
+    }
+
+    /* Metric Values */
+    .metric-hero {
         font-size: 2.2rem;
-        font-weight: 700;
-        color: #1E3A8A;
-        text-align: center;
-        margin-bottom: 0.2rem;
+        font-weight: 800;
+        margin: 8px 0;
     }
-    .sub-header {
-        font-size: 1.1rem;
-        color: #4B5563;
-        text-align: center;
-        margin-bottom: 1.5rem;
+    .text-emerald { color: #10B981; }
+    .text-rose { color: #EF4444; }
+    .text-amber { color: #F59E0B; }
+    .text-cyan { color: #38BDF8; }
+
+    /* Custom Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #0F172A !important;
+        border-right: 1px solid #1E293B;
     }
-    .card {
-        background-color: #F8FAFC;
+    
+    /* Tabs Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: #1E293B;
+        padding: 6px;
         border-radius: 10px;
-        padding: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        margin-bottom: 15px;
-        border-left: 5px solid #3B82F6;
     }
-    .metric-value {
-        font-size: 1.8rem;
-        font-weight: 700;
-    }
-    .normal-tag {
-        background-color: #DEF7EC;
-        color: #03543F;
-        padding: 4px 12px;
-        border-radius: 12px;
+    .stTabs [data-baseweb="tab"] {
+        height: 44px;
+        white-space: pre;
+        border-radius: 8px;
+        color: #94A3B8;
         font-weight: 600;
     }
-    .anomaly-tag {
-        background-color: #FDE8E8;
-        color: #9B1C1C;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-weight: 600;
+    .stTabs [aria-selected="true"] {
+        background-color: #38BDF8 !important;
+        color: #0F172A !important;
+        font-weight: 700 !important;
     }
 </style>
 """, unsafe_allow_html=True)
+
+# Initialize Session State Singletons
+if 'logger' not in st.session_state:
+    st.session_state.logger = IncidentLogger()
+
+if 'monitor' not in st.session_state:
+    st.session_state.monitor = SystemMonitor()
+
+logger = st.session_state.logger
+monitor = st.session_state.monitor
 
 @st.cache_resource
 def load_models():
@@ -93,15 +181,19 @@ def load_models():
 face_net, pose_net, video_net, context_net, fusion_net, xai_rag = load_models()
 processor = SurveillanceVideoProcessor()
 
-# Header Section
-st.markdown('<div class="main-header">🛡️ Reliability-Aware Contextual Multimodal Anomaly Detection</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Woxsen University | Authors: Palak Dwivedi, T. Sri Vaishnavi, Ojashwini Dubey, Spoorthi Reddy, Tiasha Roy | Supervisor: Dr. Uday Chandra</div>', unsafe_allow_html=True)
+# Header Banner
+st.markdown("""
+<div class="main-header-box">
+    <div class="main-title">🛡️ Reliability-Aware Contextual Multimodal Anomaly Detection</div>
+    <div class="sub-title">Woxsen University | Authors: Palak Dwivedi, T. Sri Vaishnavi, Ojashwini Dubey, Spoorthi Reddy, Tiasha Roy | Supervisor: Dr. Uday Chandra</div>
+</div>
+""", unsafe_allow_html=True)
 
-# Sidebar Configuration
-st.sidebar.header("🕹️ Control Panel & Scenario Simulation")
+# Sidebar Configuration Controls
+st.sidebar.header("🕹️ Surveillance Control Panel")
 
 preset_scenario = st.sidebar.selectbox(
-    "Select Surveillance Scenario",
+    "Select Surveillance Scenario Preset",
     [
         "1. Normal Pedestrian Activity",
         "2. Sudden Fall / Collapse",
@@ -128,18 +220,21 @@ st.sidebar.subheader("🌐 Contextual Metadata Controls")
 zone_id = st.sidebar.slider("Zone Location ID", 0, 5, 1)
 hour = st.sidebar.slider("Time of Day (Hour 0-23)", 0, 23, 14 if "Normal" in preset_scenario else (2 if "Loitering" in preset_scenario else 16))
 illumination = st.sidebar.slider("Illumination Level (0.0=Dark, 1.0=Bright)", 0.0, 1.0, 0.85 if "Normal" in preset_scenario else (0.15 if "Loitering" in preset_scenario else 0.70))
-crowd_count = st.sidebar.slider("Crowd Count", 0, 50, 3 if "Normal" in preset_scenario else (20 if "Panic" in preset_scenario else 2))
+crowd_count = st.sidebar.slider("Crowd Density Count", 0, 50, 3 if "Normal" in preset_scenario else (20 if "Panic" in preset_scenario else 2))
 baseline_norm = st.sidebar.slider("Baseline Normal Score", 0.0, 1.0, 0.9)
 face_occluded = st.sidebar.checkbox("Simulate Face Occlusion / Low Reliability", value=("Loitering" in preset_scenario or "Fall" in preset_scenario))
 
-# Modality Confidence Overrides
-st.sidebar.subheader("📡 Sensor Reliability & Noise Controls")
+st.sidebar.subheader("📡 Modality Reliability Noise Overrides")
 face_conf = st.sidebar.slider("Facial Modality Reliability (w_face)", 0.0, 1.0, 0.05 if face_occluded else 0.90)
 pose_conf = st.sidebar.slider("Pose Modality Reliability (w_pose)", 0.0, 1.0, 0.95)
 video_conf = st.sidebar.slider("Temporal Video Reliability (w_video)", 0.0, 1.0, 0.88)
 context_conf = st.sidebar.slider("Context Metadata Reliability (w_context)", 0.0, 1.0, 0.92)
 
-# Dynamic Base Parameters by Scenario Selection
+st.sidebar.subheader("⚙️ System Thresholds")
+risk_threshold = st.sidebar.slider("Anomaly Alarm Threshold P(Anomaly)", 0.1, 0.9, 0.5)
+reliability_warning_threshold = st.sidebar.slider("Min Reliability Warning Threshold", 0.3, 0.9, 0.6)
+
+# Scenario Baseline Parameter Mapping
 if "Normal" in preset_scenario:
     scenario_category = "Normal Pedestrian Activity"
     base_prob = 0.05
@@ -171,30 +266,35 @@ else:  # Custom Input Feed
     base_reliability = 0.92
     base_face_w, base_pose_w, base_video_w, base_context_w = 0.38, 0.32, 0.18, 0.12
 
-# Tabs
-tab1, tab2, tab3 = st.tabs([
-    "📹 Live Surveillance Feed & Multi-Person Detection",
-    "🧠 Multimodal Attention & Reliability Architecture",
-    "📊 Benchmark Datasets & Performance Metrics"
+# Main 5 Tabs Navigation
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📹 Live Feed & Multi-Person",
+    "🧠 Reliability Attention & XAI",
+    "🤖 Local RAG Incident Engine",
+    "📊 Executive Analytics & Log",
+    "⚙️ System Monitor & Settings"
 ])
 
+# ---------------------------------------------------------
+# TAB 1: LIVE SURVEILLANCE & MULTI-PERSON DETECTION
+# ---------------------------------------------------------
 with tab1:
     col_input, col_results = st.columns([1.1, 0.9])
 
     with col_input:
-        st.subheader("📷 Camera Feed / Video Stream Upload")
-        input_source = st.radio("Select Input Feed Type:", ["Webcam Photo Capture", "Upload Image File", "Upload Video File (.mp4, .avi)"], horizontal=True)
+        st.subheader("📷 Camera Stream & Video Feed Input")
+        input_source = st.radio("Select Feed Source:", ["Webcam Photo Capture", "Upload Image File", "Upload Video File (.mp4, .avi)"], horizontal=True)
 
         input_img = None
         uploaded_video_bytes = None
         current_frame_idx = 0
 
         if input_source == "Webcam Photo Capture":
-            img_file = st.camera_input("Take Live Surveillance Snapshot")
+            img_file = st.camera_input("Take Snapshot")
             if img_file is not None:
                 input_img = Image.open(img_file)
         elif input_source == "Upload Image File":
-            img_file = st.file_uploader("Upload Surveillance Frame", type=['png', 'jpg', 'jpeg'])
+            img_file = st.file_uploader("Upload Image Frame", type=['png', 'jpg', 'jpeg'])
             if img_file is not None:
                 input_img = Image.open(img_file)
         else:
@@ -210,8 +310,8 @@ with tab1:
                 frames, fps = vid_out, 30
 
             if len(frames) > 0:
-                st.subheader(f"🎬 Video Sequence ({len(frames)} frames extracted @ {fps} FPS)")
-                current_frame_idx = st.slider("Select Video Frame to Inspect (Click & Scrub)", 0, len(frames)-1, 0)
+                st.write(f"🎬 **Video Sequence:** `{len(frames)}` frames extracted @ `{fps}` FPS")
+                current_frame_idx = st.slider("Scrub Video Frame Index", 0, len(frames)-1, 0)
                 frame_np = frames[current_frame_idx]
             else:
                 frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
@@ -220,11 +320,7 @@ with tab1:
         else:
             frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
 
-        # Person Count Determination
-        if "Auto-Detect" in person_mode:
-            override_count = None
-        else:
-            override_count = int(person_mode.split()[0])
+        override_count = None if "Auto-Detect" in person_mode else int(person_mode.split()[0])
 
         annotated_frame, persons_data = processor.process_camera_frame_multi(
             frame_np,
@@ -235,17 +331,15 @@ with tab1:
             override_person_count=override_count
         )
 
-        st.image(annotated_frame, caption=f"MediaPipe 33-Landmark Multi-Person Skeleton Overlay [Frame #{current_frame_idx}]", use_container_width=True)
+        st.image(annotated_frame, caption=f"MediaPipe 33-Landmark Skeleton Overlay [Frame #{current_frame_idx}]", use_container_width=True)
 
     with col_results:
         st.subheader("🚨 Anomaly & Intent Diagnosis Engine")
-        
-        # Calculate dynamic per-click & per-frame probability + attention weights
+
         calc_prob = base_prob
         calc_reliability = base_reliability
         calc_category = scenario_category
 
-        # Add per-frame video slider variance
         if uploaded_video_bytes is not None:
             frame_var = float(np.sin(current_frame_idx * 0.5))
             if calc_category != "Normal Pedestrian Activity":
@@ -254,7 +348,6 @@ with tab1:
                 calc_prob = min(0.30, max(0.02, 0.05 + 0.08 * abs(frame_var)))
             calc_reliability = min(0.99, max(0.65, base_reliability + 0.04 * np.cos(current_frame_idx * 0.4)))
 
-        # Dynamic content inspection for live camera photo or uploaded image/video
         if input_img is not None or uploaded_video_bytes is not None:
             dominant_emotions = [p['emotion'] for p in persons_data if 'emotion' in p]
             if len(dominant_emotions) > 0 and all(e in ['NEUTRAL', 'HAPPY'] for e in dominant_emotions):
@@ -273,13 +366,11 @@ with tab1:
                 calc_reliability = 0.88
                 base_face_w, base_pose_w, base_video_w, base_context_w = 0.08, 0.54, 0.26, 0.12
 
-        # Dynamically modulate modality attention weights using sidebar sliders & frame index
         w_f = face_conf * base_face_w * (0.10 if face_occluded else 1.0)
         w_p = pose_conf * base_pose_w
         w_v = video_conf * base_video_w * (1.15 if uploaded_video_bytes is not None else 1.0)
         w_c = context_conf * base_context_w * (1.0 + (crowd_count / 100.0) + (abs(12 - hour) / 48.0))
 
-        # Apply per-frame slider weight shift
         if uploaded_video_bytes is not None:
             w_v *= (0.85 + 0.3 * abs(np.sin(current_frame_idx * 0.3)))
             w_p *= (0.85 + 0.3 * abs(np.cos(current_frame_idx * 0.3)))
@@ -295,7 +386,6 @@ with tab1:
         else:
             attn_weights = {'face': 0.25, 'pose': 0.25, 'video': 0.25, 'context': 0.25}
 
-        # Build dynamic fusion result dictionary
         fusion_res = {
             'predicted_category': calc_category,
             'anomaly_probability': float(calc_prob),
@@ -309,24 +399,47 @@ with tab1:
 
         prob_pct = int(calc_prob * 100)
         rel_pct = int(calc_reliability * 100)
+        dominant_modality = max(attn_weights, key=attn_weights.get)
+
+        # Log event to IncidentLogger history
+        logger.log_incident(
+            anomaly_type=calc_category,
+            risk_prob=calc_prob,
+            reliability_score=calc_reliability,
+            dominant_modality=dominant_modality.capitalize(),
+            zone=f"Zone-{zone_id}",
+            frame_idx=current_frame_idx,
+            rag_explanation=f"Detected {calc_category} with {prob_pct}% risk and {rel_pct}% reliability."
+        )
 
         if calc_category == "Normal Pedestrian Activity":
-            st.markdown(f'<div class="card"><span class="normal-tag">NORMAL ACTIVITY</span><div class="metric-value" style="color: #059669;">{prob_pct}% Anomaly Risk</div><div>Reliability Score: {rel_pct}%</div></div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="glass-card" style="border-left: 5px solid #10B981;">
+                <span class="normal-badge">NORMAL MONITORING STATUS</span>
+                <div class="metric-hero text-emerald">{prob_pct}% Anomaly Risk</div>
+                <div><b>Fusion Reliability Index:</b> <span class="text-cyan">{rel_pct}%</span></div>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            st.markdown(f'<div class="card" style="border-left-color: #EF4444;"><span class="anomaly-tag">⚠️ ANOMALY DETECTED: {calc_category.upper()}</span><div class="metric-value" style="color: #DC2626;">{prob_pct}% Risk Probability</div><div>Fusion Reliability Score: {rel_pct}%</div></div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="glass-card" style="border-left: 5px solid #EF4444;">
+                <span class="anomaly-badge">⚠️ ANOMALY DETECTED: {calc_category.upper()}</span>
+                <div class="metric-hero text-rose">{prob_pct}% Anomaly Probability</div>
+                <div><b>Fusion Reliability Index:</b> <span class="text-cyan">{rel_pct}%</span></div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        st.subheader("📊 Modality Reliability Attention Allocation")
+        st.subheader("📊 Dynamic Attention Weights")
         for mod, weight in attn_weights.items():
             st.write(f"**{mod.capitalize()} Modality Weight:** `{weight*100:.1f}%`")
             st.progress(float(weight))
 
-        st.subheader("🤖 RAG Explainable Plain-Language Alert")
+        st.subheader("🤖 Grounded RAG Explanation Alert")
         rag_alert = xai_rag.generate_rag_alert(fusion_res, metadata={'zone': f'Zone-{zone_id}', 'hour': hour})
         st.info(rag_alert['alert_text'])
 
-    # Multi-Person Dynamic Cards Section
     st.markdown("---")
-    st.subheader(f"👥 Tracked Individuals & Facial Emotion Breakdown ({len(persons_data)} Person(s) Detected)")
+    st.subheader(f"👥 Tracked Individuals ({len(persons_data)} Person(s) Detected)")
 
     person_count = len(persons_data)
     cards_per_row = 4 if person_count >= 4 else max(1, person_count)
@@ -336,72 +449,183 @@ with tab1:
         col_target = cols[idx % cards_per_row]
         with col_target:
             st.markdown(f"""
-            <div style="background: #F1F5F9; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #3B82F6;">
-                <h4 style="margin: 0; color: #1E293B;">👤 Person {person['id']}</h4>
-                <p style="margin: 4px 0;"><b>Detected Action:</b> <span style="color:#2563EB;">{person['action']}</span></p>
-                <p style="margin: 4px 0;"><b>Dominant Emotion:</b> <span style="color:#D97706;">{person['emotion']} ({person['emotion_conf']}%)</span></p>
+            <div class="glass-card">
+                <h4 style="margin: 0; color: #F8FAFC;">👤 Person {person['id']}</h4>
+                <p style="margin: 4px 0;"><b>Action:</b> <span class="text-cyan">{person['action']}</span></p>
+                <p style="margin: 4px 0;"><b>Emotion:</b> <span class="text-amber">{person['emotion']} ({person['emotion_conf']}%)</span></p>
                 <p style="margin: 4px 0;"><b>Pose Status:</b> {person['pose_status']}</p>
             </div>
             """, unsafe_allow_html=True)
 
-    # Plotly 7-Class Emotion Chart
     if len(persons_data) > 0:
         first_person_emotions = persons_data[0]['emotion_dict']
         fig_emo = px.bar(
             x=list(first_person_emotions.keys()),
             y=list(first_person_emotions.values()),
             labels={'x': 'Facial Emotion Class', 'y': 'Probability'},
-            title=f"7-Class Facial Emotion Distribution (Person 1 - Frame #{current_frame_idx})",
+            title=f"7-Class Facial Emotion Breakdown (Person 1 - Frame #{current_frame_idx})",
             color=list(first_person_emotions.values()),
             color_continuous_scale="Purples"
         )
-        fig_emo.update_layout(height=280, margin=dict(l=20, r=20, t=40, b=20))
+        fig_emo.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#E2E8F0'),
+            height=260,
+            margin=dict(l=20, r=20, t=40, b=20)
+        )
         st.plotly_chart(fig_emo, use_container_width=True)
 
+# ---------------------------------------------------------
+# TAB 2: RELIABILITY-AWARE ATTENTION & EXPLAINABLE AI (XAI)
+# ---------------------------------------------------------
 with tab2:
-    st.subheader("🧠 Architecture & Reliability-Aware Attention Mechanism")
-    st.markdown("""
-    The framework addresses modality degradation (e.g. face occlusion, night-time darkness, erratic motion) by computing dynamic confidence scores $w_m \\in [0, 1]$ for each modality $m \\in \\{f, p, v, c\\}$:
+    st.subheader("🧠 Explainable AI (XAI) & Spatial Activation Visualizations")
+
+    col_cam, col_shap = st.columns([1.1, 0.9])
+
+    with col_cam:
+        st.markdown("#### 🔴 Grad-CAM Spatial Activation Heatmap Overlay")
+        gradcam_heatmap = xai_rag.generate_gradcam_heatmap(
+            frame_shape=(frame_np.shape[0], frame_np.shape[1]),
+            anomaly_type=calc_category
+        )
+        blend_alpha = st.slider("Grad-CAM Heatmap Opacity (Alpha)", 0.1, 0.9, 0.5)
+        gradcam_frame = XAIVisualizer.apply_gradcam_overlay(frame_np, gradcam_heatmap, alpha=blend_alpha)
+        st.image(gradcam_frame, caption=f"Grad-CAM Heatmap Activation [{calc_category}]", use_container_width=True)
+
+    with col_shap:
+        st.markdown("#### 📈 SHAP Modality Feature Attribution Scores")
+        shap_scores = xai_rag.compute_shap_feature_importance(attn_weights, fusion_res['category_probs'])
+        fig_shap = XAIVisualizer.create_shap_bar_chart(shap_scores)
+        st.plotly_chart(fig_shap, use_container_width=True)
+
+        st.markdown("#### 🎯 Multimodal Attention Radar Chart")
+        fig_radar = XAIVisualizer.create_attention_radar_chart(attn_weights)
+        st.plotly_chart(fig_radar, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("📐 Mathematical Formulation & Architecture Specifications")
+    st.markdown(r"""
+    The framework computes dynamic modality confidence weights $w_m \in [0, 1]$ for each modality $m \in \{f, p, v, c\}$:
     $$
-    \\tilde{\\alpha}_m = \\exp\\left(\\frac{W_a h_m + b_a}{\\tau}\\right) \\cdot w_m
+    \tilde{\alpha}_m = \exp\left(\frac{W_a h_m + b_a}{\tau}\right) \cdot w_m
+    \quad \implies \quad
+    \alpha_m = \frac{\tilde{\alpha}_m}{\sum_{k} \tilde{\alpha}_k}
     $$
+    **Overall Reliability Index:**
     $$
-    \\alpha_m = \\frac{\\tilde{\\alpha}_m}{\\sum_{k} \\tilde{\\alpha}_k}
+    R = \sum_{m \in \{f, p, v, c\}} \alpha_m \cdot w_m
     $$
     """)
 
-    st.subheader("📐 Modality Feature Dimension Mapping")
-    mod_df = pd.DataFrame([
-        {"Modality": "Facial Expressions (CNN)", "Features": "64D Embeddings", "Confidence Metric": "Haar BBox Score / Occlusion Ratio"},
-        {"Modality": "Body Skeleton Pose (MediaPipe)", "Features": "99D Keypoints (33x3)", "Confidence Metric": "MediaPipe Visibility Scores"},
-        {"Modality": "Temporal Video Motion (CNN-LSTM)", "Features": "128D Temporal Vectors", "Confidence Metric": "Optical Flow Magnitude"},
-        {"Modality": "Contextual Metadata (MLP)", "Features": "32D Scene Embeddings", "Confidence Metric": "Sensor Calibration Index"}
-    ])
-    st.table(mod_df)
-
+# ---------------------------------------------------------
+# TAB 3: LOCAL RAG INCIDENT PRECEDENT ENGINE
+# ---------------------------------------------------------
 with tab3:
-    st.subheader("📊 Multi-Dataset Performance & Metric Benchmarks")
-    datasets = load_all_datasets()
+    st.subheader("🤖 Local RAG Precedent Search & Grounded Explanations")
+    st.markdown("Query the local surveillance knowledge base using vector similarity matching over historical precedents.")
 
-    col_m1, col_m2, col_m3 = st.columns(3)
-    col_m1.metric("Multimodal Emotion Accuracy", "91.4%", "+2.3% vs Single Modality")
-    col_m2.metric("MPII Human Pose Precision", "93.8%", "MPJPE: 41.2mm")
-    col_m3.metric("UCF-Crime Anomaly AUC", "94.6%", "Reliability Weighted")
+    precedent = xai_rag.retrieve_incident_precedent(calc_category, attn_weights, zone=f"Zone-{zone_id}")
 
-    st.subheader("📈 ROC Curves across Benchmark Datasets")
-    fpr = np.linspace(0, 1, 100)
-    tpr_multimodal = 1 - np.exp(-5 * fpr)
-    tpr_face = 1 - np.exp(-3 * fpr)
-    tpr_pose = 1 - np.exp(-3.5 * fpr)
+    col_prec1, col_prec2 = st.columns([1, 1])
+    with col_prec1:
+        st.markdown(f"""
+        <div class="glass-card" style="border-left: 5px solid #8B5CF6;">
+            <h3 style="margin-top:0; color:#38BDF8;">📌 Top Matched Incident Precedent: {precedent.get('id', 'INC-101')}</h3>
+            <p><b>Category:</b> <span class="text-amber">{precedent.get('category', 'N/A')}</span></p>
+            <p><b>Zone Location:</b> {precedent.get('zone', 'N/A')}</p>
+            <p><b>Primary Modality:</b> {precedent.get('primary_modality', 'N/A')}</p>
+            <p><b>Historical Description:</b> <i>"{precedent.get('description', '')}"</i></p>
+            <p><b>Recommended Security Action:</b> <span class="text-emerald">{precedent.get('recommended_action', '')}</span></p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    fig_roc = go.Figure()
-    fig_roc.add_trace(go.Scatter(x=fpr, y=tpr_multimodal, mode='lines', name='Proposed Reliability-Aware Fusion (AUC = 0.95)', line=dict(color='purple', width=3)))
-    fig_roc.add_trace(go.Scatter(x=fpr, y=tpr_face, mode='lines', name='Facial Branch Only (AUC = 0.84)', line=dict(color='blue', dash='dash')))
-    fig_roc.add_trace(go.Scatter(x=fpr, y=tpr_pose, mode='lines', name='Pose Branch Only (AUC = 0.87)', line=dict(color='green', dash='dot')))
-    fig_roc.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random Classifier', line=dict(color='gray', dash='dash')))
+    with col_prec2:
+        st.markdown("#### 📚 Knowledge Base Incident Examples")
+        kb_data = xai_rag.load_knowledge_base()
+        kb_df = pd.DataFrame(kb_data)
+        st.dataframe(kb_df[['id', 'category', 'zone', 'primary_modality', 'recommended_action']], use_container_width=True, height=260)
 
-    fig_roc.update_layout(title="ROC Comparison across Modality Configurations", xaxis_title="False Positive Rate", yaxis_title="True Positive Rate", height=400)
-    st.plotly_chart(fig_roc, use_container_width=True)
+# ---------------------------------------------------------
+# TAB 4: EXECUTIVE ANALYTICS & HISTORICAL INCIDENT LOG
+# ---------------------------------------------------------
+with tab4:
+    st.subheader("📊 Executive Surveillance Analytics & Event Log")
+
+    history_df = logger.get_history_dataframe()
+    total_events = len(logger.history)
+    high_risk_count = sum(1 for e in logger.history if e.get('risk_score', 0) > 0.5)
+    avg_fps = monitor.update_fps()
+    avg_rel = round(np.mean([e.get('reliability_score', 0) for e in logger.history])*100, 1) if logger.history else 92.4
+
+    col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+    col_kpi1.markdown(f'<div class="glass-card"><div class="sub-title">Total Logged Incidents</div><div class="metric-hero text-cyan">{total_events}</div></div>', unsafe_allow_html=True)
+    col_kpi2.markdown(f'<div class="glass-card"><div class="sub-title">High Risk Alerts</div><div class="metric-hero text-rose">{high_risk_count}</div></div>', unsafe_allow_html=True)
+    col_kpi3.markdown(f'<div class="glass-card"><div class="sub-title">Real-Time FPS</div><div class="metric-hero text-emerald">{avg_fps}</div></div>', unsafe_allow_html=True)
+    col_kpi4.markdown(f'<div class="glass-card"><div class="sub-title">Mean System Reliability</div><div class="metric-hero text-amber">{avg_rel}%</div></div>', unsafe_allow_html=True)
+
+    col_chart1, col_chart2 = st.columns([1, 1])
+
+    with col_chart1:
+        st.markdown("#### 📈 Incident Category Risk Distribution")
+        if logger.history:
+            cats = [e.get('category', 'Normal') for e in logger.history]
+            fig_pie = px.pie(names=cats, title="Logged Event Category Ratio", color_discrete_sequence=px.colors.sequential.PuBu)
+            fig_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#E2E8F0'), height=260)
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+    with col_chart2:
+        st.markdown("#### 🌐 Primary Modality Drivers")
+        if logger.history:
+            mods = [e.get('dominant_modality', 'Pose') for e in logger.history]
+            fig_bar = px.histogram(x=mods, labels={'x': 'Modality Driver'}, title="Modality Trigger Frequency", color_discrete_sequence=['#38BDF8'])
+            fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#E2E8F0'), height=260)
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+    st.markdown("#### 📋 Interactive Filterable Incident History Log")
+    st.dataframe(history_df, use_container_width=True, height=250)
+
+    col_exp1, col_exp2, col_exp3, col_exp4 = st.columns(4)
+    with col_exp1:
+        st.download_button("📥 Export CSV Report", data=logger.export_csv(), file_name="surveillance_incidents.csv", mime="text/csv")
+    with col_exp2:
+        st.download_button("📥 Export JSON Report", data=logger.export_json(), file_name="surveillance_incidents.json", mime="application/json")
+    with col_exp3:
+        st.download_button("📥 Export HTML Report", data=logger.export_html_report(), file_name="surveillance_report.html", mime="text/html")
+    with col_exp4:
+        if st.button("🗑️ Clear Log History"):
+            logger.clear_history()
+            st.success("Log history cleared!")
+
+# ---------------------------------------------------------
+# TAB 5: SYSTEM MONITOR & SETTINGS
+# ---------------------------------------------------------
+with tab5:
+    st.subheader("⚙️ System Hardware Health & Inference Latency Profiling")
+
+    hw = monitor.get_hardware_metrics()
+
+    col_g1, col_g2, col_g3 = st.columns(3)
+    with col_g1:
+        st.plotly_chart(monitor.create_gauge_chart(hw['cpu_percent'], "CPU Utilization"), use_container_width=True)
+    with col_g2:
+        st.plotly_chart(monitor.create_gauge_chart(hw['ram_percent'], "RAM Utilization"), use_container_width=True)
+    with col_g3:
+        st.markdown(f"""
+        <div class="glass-card" style="height: 180px;">
+            <div class="sub-title">GPU Status & Latency</div>
+            <div style="margin-top: 15px;"><b>GPU Device:</b> <span class="text-cyan">{hw['gpu_status']}</span></div>
+            <div style="margin-top: 10px;"><b>RAM Used:</b> {hw['ram_used_gb']} GB / {hw['ram_total_gb']} GB</div>
+            <div style="margin-top: 10px;"><b>Total Latency:</b> <span class="text-emerald">{hw['total_inference_latency']} ms</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.plotly_chart(monitor.create_latency_bar_chart(), use_container_width=True)
+
+    st.markdown("#### 📜 Live System Diagnostic Logs")
+    for log in reversed(monitor.logs[-10:]):
+        st.text(f"[{log['timestamp']}] [{log['level']}] {log['message']}")
 
 st.markdown("---")
 st.caption("© 2026 Woxsen University | Reliability-Aware Contextual Multimodal Anomaly Detection Project | All Rights Reserved.")
