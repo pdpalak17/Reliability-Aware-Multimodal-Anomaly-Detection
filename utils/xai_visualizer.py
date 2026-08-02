@@ -85,15 +85,15 @@ class XAIVisualizer:
         ))
 
         fig.update_layout(
-            title=dict(text=title, font=dict(size=16, color='#F8FAFC')),
+            title=dict(text=title, font=dict(size=16, color='#0F172A')),
             xaxis_title="SHAP Importance Value",
             yaxis_title="Modality Branch",
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#E2E8F0'),
+            font=dict(color='#334155'),
             height=280,
             margin=dict(l=20, r=20, t=40, b=20),
-            xaxis=dict(gridcolor='#334155', range=[0, max(values_sorted)*1.15 if values_sorted else 1.0])
+            xaxis=dict(gridcolor='#E2E8F0', range=[0, max(values_sorted)*1.15 if values_sorted else 1.0])
         )
         return fig
 
@@ -114,20 +114,20 @@ class XAIVisualizer:
             r=r_vals,
             theta=theta_vals,
             fill='toself',
-            fillcolor='rgba(139, 92, 246, 0.4)',
-            line=dict(color='#8B5CF6', width=2),
+            fillcolor='rgba(59, 130, 246, 0.25)',
+            line=dict(color='#3B82F6', width=2),
             name='Attention Weight'
         ))
 
         fig.update_layout(
             polar=dict(
-                radialaxis=dict(visible=True, range=[0, 1.0], gridcolor='#334155', tickfont=dict(color='#94A3B8')),
-                angularaxis=dict(gridcolor='#334155', tickfont=dict(color='#F8FAFC', size=12)),
-                bgcolor='rgba(15, 23, 42, 0.6)'
+                radialaxis=dict(visible=True, range=[0, 1.0], gridcolor='#CBD5E1', tickfont=dict(color='#64748B')),
+                angularaxis=dict(gridcolor='#CBD5E1', tickfont=dict(color='#0F172A', size=12)),
+                bgcolor='rgba(241, 245, 249, 0.6)'
             ),
             paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#E2E8F0'),
-            title=dict(text=title, font=dict(size=16, color='#F8FAFC')),
+            font=dict(color='#334155'),
+            title=dict(text=title, font=dict(size=16, color='#0F172A')),
             height=300,
             margin=dict(l=40, r=40, t=40, b=30),
             showlegend=False

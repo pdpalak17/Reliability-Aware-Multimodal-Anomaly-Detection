@@ -31,37 +31,41 @@ from utils.system_monitor import SystemMonitor
 
 # Page Configuration
 st.set_page_config(
-    page_title="SENTINEL-AI | Reliability-Aware Multimodal Anomaly Detection",
+    page_title="SENTINEL-AI | Reliability-Aware Multimodal Anomaly Detection Platform",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Handcrafted Hand-Tuned SOC Dark Design System
+# Handcrafted Bright, Crisp, Premium SaaS Design System (Apple / Arc / Notion / Vercel Aesthetic)
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
-    /* Global Base */
+    /* Global Base & Bright Palette */
     html, body, [data-testid="stAppViewContainer"] {
-        background-color: #09090B !important;
-        color: #FAFAFA !important;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        background-color: #F8FAFC !important;
+        color: #0F172A !important;
+        font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
 
-    /* Ambient Glow Main Background */
+    /* Ambient Mesh Gradient Main Background */
     .stApp {
-        background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.08) 0%, rgba(9, 9, 11, 1) 70%), #09090B !important;
+        background: 
+            radial-gradient(at 10% 10%, rgba(59, 130, 246, 0.08) 0px, transparent 50%),
+            radial-gradient(at 90% 10%, rgba(139, 92, 246, 0.07) 0px, transparent 50%),
+            radial-gradient(at 50% 90%, rgba(6, 182, 212, 0.06) 0px, transparent 50%),
+            #F8FAFC !important;
     }
 
-    /* Hero Header Container */
+    /* Hero Banner Container */
     .hero-container {
-        background: linear-gradient(180deg, rgba(24, 24, 27, 0.7) 0%, rgba(18, 18, 21, 0.85) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        padding: 28px 24px;
+        background: linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%);
+        border: 1px solid #E2E8F0;
+        border-radius: 20px;
+        padding: 32px 28px;
         margin-bottom: 24px;
-        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
         position: relative;
         overflow: hidden;
     }
@@ -69,151 +73,152 @@ st.markdown("""
         position: absolute;
         top: -60px;
         right: -60px;
-        width: 250px;
-        height: 250px;
-        background: radial-gradient(circle, rgba(59, 130, 246, 0.22) 0%, rgba(0, 0, 0, 0) 70%);
+        width: 280px;
+        height: 280px;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
         pointer-events: none;
     }
     .hero-title {
-        font-size: 2.3rem;
+        font-size: 2.4rem;
         font-weight: 800;
         letter-spacing: -0.03em;
-        background: linear-gradient(135deg, #FFFFFF 0%, #A1A1AA 100%);
+        background: linear-gradient(135deg, #0F172A 0%, #334155 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
     }
     .hero-subtitle {
-        font-size: 0.98rem;
-        color: #71717A;
-        font-weight: 400;
+        font-size: 1.02rem;
+        color: #475569;
+        font-weight: 500;
         max-width: 850px;
     }
 
-    /* Status Dot Pulse */
+    /* Live Operational Pulse Dot */
     .pulse-dot {
         display: inline-block;
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
-        background-color: #10B981;
-        box-shadow: 0 0 10px #10B981;
+        background-color: #22C55E;
+        box-shadow: 0 0 12px #22C55E;
         animation: pulse-ring 2s infinite;
         margin-right: 6px;
         vertical-align: middle;
     }
     @keyframes pulse-ring {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
     }
 
-    /* Handcrafted Glassmorphism Card */
-    .soc-card {
-        background: rgba(18, 18, 21, 0.75);
-        border: 1px solid rgba(255, 255, 255, 0.07);
-        border-radius: 14px;
-        padding: 20px;
-        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    /* Premium SaaS Glass Card */
+    .saas-card {
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid #E2E8F0;
+        border-radius: 16px;
+        padding: 22px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
         backdrop-filter: blur(16px);
         transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         margin-bottom: 20px;
     }
-    .soc-card:hover {
-        border-color: rgba(59, 130, 246, 0.3);
-        transform: translateY(-2px);
-        box-shadow: 0 15px 35px -10px rgba(59, 130, 246, 0.15);
+    .saas-card:hover {
+        border-color: #3B82F6;
+        transform: translateY(-3px);
+        box-shadow: 0 20px 35px -5px rgba(59, 130, 246, 0.12);
     }
 
-    /* SOC Badges */
-    .soc-badge-normal {
-        background: rgba(16, 185, 129, 0.12);
-        color: #34D399;
-        border: 1px solid rgba(16, 185, 129, 0.3);
-        padding: 4px 12px;
+    /* Bright Badges */
+    .badge-normal {
+        background: #DCFCE7;
+        color: #15803D;
+        border: 1px solid #86EFAC;
+        padding: 5px 14px;
         border-radius: 20px;
         font-size: 0.78rem;
         font-weight: 700;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.04em;
         text-transform: uppercase;
         display: inline-block;
     }
-    .soc-badge-alert {
-        background: rgba(239, 68, 68, 0.12);
-        color: #FCA5A5;
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        padding: 4px 12px;
+    .badge-alert {
+        background: #FEE2E2;
+        color: #B91C1C;
+        border: 1px solid #FCA5A5;
+        padding: 5px 14px;
         border-radius: 20px;
         font-size: 0.78rem;
         font-weight: 700;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.04em;
         text-transform: uppercase;
         display: inline-block;
     }
-    .soc-badge-info {
-        background: rgba(59, 130, 246, 0.12);
-        color: #60A5FA;
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        padding: 4px 12px;
+    .badge-info {
+        background: #DBEAFE;
+        color: #1D4ED8;
+        border: 1px solid #93C5FD;
+        padding: 5px 14px;
         border-radius: 20px;
         font-size: 0.78rem;
         font-weight: 700;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.04em;
         text-transform: uppercase;
         display: inline-block;
     }
 
-    /* Metrics Values & Typography */
-    .soc-metric-value {
-        font-size: 2.3rem;
+    /* Metric Values & Typography */
+    .metric-value {
+        font-size: 2.4rem;
         font-weight: 800;
         letter-spacing: -0.04em;
         line-height: 1.1;
         margin: 8px 0;
     }
-    .soc-metric-label {
+    .metric-label {
         font-size: 0.82rem;
-        color: #71717A;
-        font-weight: 600;
+        color: #64748B;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.06em;
     }
-    .text-emerald { color: #10B981; }
-    .text-rose { color: #F87171; }
-    .text-amber { color: #F59E0B; }
-    .text-cyan { color: #38BDF8; }
+    .text-emerald { color: #16A34A; }
+    .text-rose { color: #DC2626; }
+    .text-amber { color: #D97706; }
+    .text-blue { color: #2563EB; }
 
     /* Modern Tabs Bar */
     .stTabs [data-baseweb="tab-list"] {
         gap: 6px;
-        background: #121215;
+        background: #FFFFFF;
         padding: 6px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 14px;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
     }
     .stTabs [data-baseweb="tab"] {
         height: 42px;
-        padding: 0 18px;
-        border-radius: 8px;
-        color: #71717A;
+        padding: 0 20px;
+        border-radius: 10px;
+        color: #64748B;
         font-weight: 600;
         font-size: 0.88rem;
         transition: all 0.2s ease;
     }
     .stTabs [aria-selected="true"] {
-        background: #27272A !important;
-        color: #FAFAFA !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        background: #3B82F6 !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
     }
 
     /* Custom Sidebar Styling */
     section[data-testid="stSidebar"] {
-        background-color: #0C0C0E !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+        background-color: #FFFFFF !important;
+        border-right: 1px solid #E2E8F0 !important;
     }
     section[data-testid="stSidebar"] .stMarkdown h2, 
     section[data-testid="stSidebar"] .stMarkdown h3 {
-        color: #A1A1AA !important;
+        color: #334155 !important;
         font-size: 0.82rem !important;
         text-transform: uppercase !important;
         letter-spacing: 0.08em !important;
@@ -250,21 +255,21 @@ def load_models():
 face_net, pose_net, video_net, context_net, fusion_net, xai_rag = load_models()
 processor = SurveillanceVideoProcessor()
 
-# Executive Hero Banner
+# Bright Executive Hero Banner
 st.markdown("""
 <div class="hero-container">
     <div class="hero-glow"></div>
-    <div class="hero-title">🛡️ SENTINEL-AI | SOC Surveillance Platform</div>
+    <div class="hero-title">🛡️ SENTINEL-AI | Multimodal Surveillance Platform</div>
     <div class="hero-subtitle">
         <span class="pulse-dot"></span> <b>SYSTEM OPERATIONAL</b> &nbsp;|&nbsp; 
-        Reliability-Aware Contextual Multimodal Anomaly Detection Framework &nbsp;|&nbsp; 
+        Reliability-Aware Contextual Multimodal Anomaly Detection & RAG Diagnosis &nbsp;|&nbsp; 
         <i>Woxsen University Research Project</i>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar Control Panel
-st.sidebar.header("🕹️ SOC Operational Controls")
+# Sidebar Operational Control Panel
+st.sidebar.header("🕹️ Operational Controls")
 
 preset_scenario = st.sidebar.selectbox(
     "Surveillance Scenario Preset",
@@ -430,6 +435,8 @@ with tab1:
             override_person_count=override_count
         )
 
+        st.image(annotated_frame, caption=f"MediaPipe 33-Landmark Skeleton Overlay [Frame #{current_frame_idx}]", use_container_width=True)
+
         # Explicit Trigger Button for Multimodal Anomaly Detection
         run_detection = st.button("🔍 Run Multimodal Anomaly Detection & RAG Diagnosis", type="primary", use_container_width=True)
 
@@ -522,18 +529,18 @@ with tab1:
 
         if "normal" in calc_category.lower():
             st.markdown(f"""
-            <div class="soc-card" style="border-left: 4px solid #10B981;">
-                <span class="soc-badge-normal">NORMAL MONITORING STATUS</span>
-                <div class="soc-metric-value text-emerald">{prob_pct}% Anomaly Risk</div>
-                <div style="font-size: 0.88rem;"><b>Fusion Reliability Index:</b> <span class="text-cyan">{rel_pct}%</span></div>
+            <div class="saas-card" style="border-left: 4px solid #22C55E;">
+                <span class="badge-normal">NORMAL MONITORING STATUS</span>
+                <div class="metric-value text-emerald">{prob_pct}% Anomaly Risk</div>
+                <div style="font-size: 0.88rem; color: #475569;"><b>Fusion Reliability Index:</b> <span class="text-blue">{rel_pct}%</span></div>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
-            <div class="soc-card" style="border-left: 4px solid #F87171;">
-                <span class="soc-badge-alert">⚠️ ANOMALY DETECTED: {calc_category.upper()}</span>
-                <div class="soc-metric-value text-rose">{prob_pct}% Anomaly Risk Probability</div>
-                <div style="font-size: 0.88rem;"><b>Fusion Reliability Index:</b> <span class="text-cyan">{rel_pct}%</span></div>
+            <div class="saas-card" style="border-left: 4px solid #EF4444;">
+                <span class="badge-alert">⚠️ ANOMALY DETECTED: {calc_category.upper()}</span>
+                <div class="metric-value text-rose">{prob_pct}% Anomaly Risk Probability</div>
+                <div style="font-size: 0.88rem; color: #475569;"><b>Fusion Reliability Index:</b> <span class="text-blue">{rel_pct}%</span></div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -565,11 +572,11 @@ with tab1:
         col_target = cols[idx % cards_per_row]
         with col_target:
             st.markdown(f"""
-            <div class="soc-card">
-                <h4 style="margin: 0 0 8px 0; color: #FAFAFA;">👤 Person {person['id']}</h4>
-                <p style="margin: 3px 0; font-size: 0.86rem;"><b>Action:</b> <span class="text-cyan">{person['action']}</span></p>
-                <p style="margin: 3px 0; font-size: 0.86rem;"><b>Emotion:</b> <span class="text-amber">{person['emotion']} ({int(round(person['emotion_conf']*100 if person['emotion_conf'] <= 1.0 else person['emotion_conf']))}%)</span></p>
-                <p style="margin: 3px 0; font-size: 0.86rem;"><b>Pose Status:</b> {person['pose_status']}</p>
+            <div class="saas-card">
+                <h4 style="margin: 0 0 8px 0; color: #0F172A;">👤 Person {person['id']}</h4>
+                <p style="margin: 3px 0; font-size: 0.86rem; color: #475569;"><b>Action:</b> <span class="text-blue">{person['action']}</span></p>
+                <p style="margin: 3px 0; font-size: 0.86rem; color: #475569;"><b>Emotion:</b> <span class="text-amber">{person['emotion']} ({int(round(person['emotion_conf']*100 if person['emotion_conf'] <= 1.0 else person['emotion_conf']))}%)</span></p>
+                <p style="margin: 3px 0; font-size: 0.86rem; color: #475569;"><b>Pose Status:</b> {person['pose_status']}</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -586,7 +593,7 @@ with tab1:
         fig_emo.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#E2E8F0'),
+            font=dict(color='#334155'),
             height=250,
             margin=dict(l=20, r=20, t=40, b=20)
         )
@@ -648,14 +655,14 @@ with tab3:
     with col_prec1:
         sim_score_str = f" ({int(precedent.get('similarity_score', 0.95)*100)}% Vector Match)" if 'similarity_score' in precedent else ""
         st.markdown(f"""
-        <div class="soc-card" style="border-left: 4px solid #60A5FA;">
-            <span class="soc-badge-info">TOP MATCHED INCIDENT PRECEDENT</span>
-            <h3 style="margin: 10px 0 6px 0; color: #FAFAFA;">📌 {precedent.get('id', 'INC-101')}{sim_score_str}</h3>
-            <p style="margin: 4px 0; font-size: 0.9rem;"><b>Category:</b> <span class="text-amber">{precedent.get('category', 'N/A')}</span></p>
-            <p style="margin: 4px 0; font-size: 0.9rem;"><b>Zone Location:</b> {precedent.get('zone', 'N/A')}</p>
-            <p style="margin: 4px 0; font-size: 0.9rem;"><b>Primary Modality:</b> {precedent.get('primary_modality', 'N/A')}</p>
-            <p style="margin: 8px 0; font-size: 0.9rem; color: #A1A1AA;"><b>Historical Precedent Note:</b> <i>"{precedent.get('description', '')}"</i></p>
-            <p style="margin: 6px 0; font-size: 0.9rem;"><b>Recommended Security Action:</b> <span class="text-emerald">{precedent.get('recommended_action', '')}</span></p>
+        <div class="saas-card" style="border-left: 4px solid #3B82F6;">
+            <span class="badge-info">TOP MATCHED INCIDENT PRECEDENT</span>
+            <h3 style="margin: 10px 0 6px 0; color: #0F172A;">📌 {precedent.get('id', 'INC-101')}{sim_score_str}</h3>
+            <p style="margin: 4px 0; font-size: 0.9rem; color: #334155;"><b>Category:</b> <span class="text-amber">{precedent.get('category', 'N/A')}</span></p>
+            <p style="margin: 4px 0; font-size: 0.9rem; color: #334155;"><b>Zone Location:</b> {precedent.get('zone', 'N/A')}</p>
+            <p style="margin: 4px 0; font-size: 0.9rem; color: #334155;"><b>Primary Modality:</b> {precedent.get('primary_modality', 'N/A')}</p>
+            <p style="margin: 8px 0; font-size: 0.9rem; color: #475569;"><b>Historical Precedent Note:</b> <i>"{precedent.get('description', '')}"</i></p>
+            <p style="margin: 6px 0; font-size: 0.9rem; color: #334155;"><b>Recommended Security Action:</b> <span class="text-emerald">{precedent.get('recommended_action', '')}</span></p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -678,10 +685,10 @@ with tab4:
     avg_rel = round(np.mean([e.get('reliability_score', 0) for e in logger.history])*100, 1) if logger.history else 92.4
 
     col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
-    col_kpi1.markdown(f'<div class="soc-card"><div class="soc-metric-label">Total Logged Incidents</div><div class="soc-metric-value text-cyan">{total_events}</div></div>', unsafe_allow_html=True)
-    col_kpi2.markdown(f'<div class="soc-card"><div class="soc-metric-label">High Risk Alerts</div><div class="soc-metric-value text-rose">{high_risk_count}</div></div>', unsafe_allow_html=True)
-    col_kpi3.markdown(f'<div class="soc-card"><div class="soc-metric-label">Real-Time FPS</div><div class="soc-metric-value text-emerald">{avg_fps}</div></div>', unsafe_allow_html=True)
-    col_kpi4.markdown(f'<div class="soc-card"><div class="soc-metric-label">Mean System Reliability</div><div class="soc-metric-value text-amber">{avg_rel}%</div></div>', unsafe_allow_html=True)
+    col_kpi1.markdown(f'<div class="saas-card"><div class="metric-label">Total Logged Incidents</div><div class="metric-value text-blue">{total_events}</div></div>', unsafe_allow_html=True)
+    col_kpi2.markdown(f'<div class="saas-card"><div class="metric-label">High Risk Alerts</div><div class="metric-value text-rose">{high_risk_count}</div></div>', unsafe_allow_html=True)
+    col_kpi3.markdown(f'<div class="saas-card"><div class="metric-label">Real-Time FPS</div><div class="metric-value text-emerald">{avg_fps}</div></div>', unsafe_allow_html=True)
+    col_kpi4.markdown(f'<div class="saas-card"><div class="metric-label">Mean System Reliability</div><div class="metric-value text-amber">{avg_rel}%</div></div>', unsafe_allow_html=True)
 
     col_chart1, col_chart2 = st.columns([1, 1])
 
@@ -689,16 +696,16 @@ with tab4:
         st.markdown("#### 📈 Incident Category Risk Distribution")
         if logger.history:
             cats = [e.get('category', 'Normal') for e in logger.history]
-            fig_pie = px.pie(names=cats, title="Logged Event Category Ratio", color_discrete_sequence=px.colors.sequential.Darkmint)
-            fig_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#E2E8F0'), height=260)
+            fig_pie = px.pie(names=cats, title="Logged Event Category Ratio", color_discrete_sequence=px.colors.sequential.Blues)
+            fig_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#334155'), height=260)
             st.plotly_chart(fig_pie, use_container_width=True)
 
     with col_chart2:
         st.markdown("#### 🌐 Primary Modality Trigger Frequency")
         if logger.history:
             mods = [e.get('dominant_modality', 'Pose') for e in logger.history]
-            fig_bar = px.histogram(x=mods, labels={'x': 'Modality Driver'}, title="Modality Trigger Frequency", color_discrete_sequence=['#60A5FA'])
-            fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#E2E8F0'), height=260)
+            fig_bar = px.histogram(x=mods, labels={'x': 'Modality Driver'}, title="Modality Trigger Frequency", color_discrete_sequence=['#3B82F6'])
+            fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#334155'), height=260)
             st.plotly_chart(fig_bar, use_container_width=True)
 
     st.markdown("#### 📋 Interactive Filterable Incident History Log")
@@ -731,11 +738,11 @@ with tab5:
         st.plotly_chart(monitor.create_gauge_chart(hw['ram_percent'], "RAM Utilization"), use_container_width=True)
     with col_g3:
         st.markdown(f"""
-        <div class="soc-card" style="height: 180px;">
-            <div class="soc-metric-label">GPU Acceleration & Hardware Memory</div>
-            <div style="margin-top: 15px; font-size: 0.9rem;"><b>GPU Device:</b> <span class="text-cyan">{hw['gpu_status']}</span></div>
-            <div style="margin-top: 10px; font-size: 0.9rem;"><b>RAM Used:</b> {hw['ram_used_gb']} GB / {hw['ram_total_gb']} GB</div>
-            <div style="margin-top: 10px; font-size: 0.9rem;"><b>Total Pipeline Latency:</b> <span class="text-emerald">{hw['total_inference_latency']} ms</span></div>
+        <div class="saas-card" style="height: 180px;">
+            <div class="metric-label">GPU Acceleration & Hardware Memory</div>
+            <div style="margin-top: 15px; font-size: 0.9rem; color: #334155;"><b>GPU Device:</b> <span class="text-blue">{hw['gpu_status']}</span></div>
+            <div style="margin-top: 10px; font-size: 0.9rem; color: #334155;"><b>RAM Used:</b> {hw['ram_used_gb']} GB / {hw['ram_total_gb']} GB</div>
+            <div style="margin-top: 10px; font-size: 0.9rem; color: #334155;"><b>Total Pipeline Latency:</b> <span class="text-emerald">{hw['total_inference_latency']} ms</span></div>
         </div>
         """, unsafe_allow_html=True)
 

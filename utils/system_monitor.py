@@ -95,24 +95,24 @@ class SystemMonitor:
         fig = go.Figure(go.Indicator(
             mode="gauge+number",
             value=value,
-            number={'suffix': suffix, 'font': {'color': '#F8FAFC', 'size': 24}},
-            title={'text': title, 'font': {'size': 14, 'color': '#94A3B8'}},
+            number={'suffix': suffix, 'font': {'color': '#0F172A', 'size': 24}},
+            title={'text': title, 'font': {'size': 14, 'color': '#64748B'}},
             gauge={
-                'axis': {'range': [min_val, max_val], 'tickwidth': 1, 'tickcolor': "#475569"},
+                'axis': {'range': [min_val, max_val], 'tickwidth': 1, 'tickcolor': "#CBD5E1"},
                 'bar': {'color': "#3B82F6" if value < 75 else "#EF4444"},
-                'bgcolor': "rgba(30, 41, 59, 0.5)",
+                'bgcolor': "rgba(241, 245, 249, 0.8)",
                 'borderwidth': 1,
-                'bordercolor': "#475569",
+                'bordercolor': "#E2E8F0",
                 'steps': [
-                    {'range': [min_val, max_val * 0.6], 'color': 'rgba(16, 185, 129, 0.2)'},
-                    {'range': [max_val * 0.6, max_val * 0.85], 'color': 'rgba(245, 158, 11, 0.2)'},
-                    {'range': [max_val * 0.85, max_val], 'color': 'rgba(239, 68, 68, 0.2)'}
+                    {'range': [min_val, max_val * 0.6], 'color': 'rgba(34, 197, 94, 0.15)'},
+                    {'range': [max_val * 0.6, max_val * 0.85], 'color': 'rgba(245, 158, 11, 0.15)'},
+                    {'range': [max_val * 0.85, max_val], 'color': 'rgba(239, 68, 68, 0.15)'}
                 ],
             }
         ))
         fig.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#E2E8F0'),
+            font=dict(color='#334155'),
             height=180,
             margin=dict(l=20, r=20, t=30, b=10)
         )
@@ -127,19 +127,19 @@ class SystemMonitor:
             x=times,
             y=branches,
             orientation='h',
-            marker=dict(color='#38BDF8'),
+            marker=dict(color='#3B82F6'),
             text=[f"{t:.1f} ms" for t in times],
             textposition='auto'
         ))
 
         fig.update_layout(
-            title=dict(text="Module Inference Latency Breakdown (ms)", font=dict(size=15, color='#F8FAFC')),
+            title=dict(text="Module Inference Latency Breakdown (ms)", font=dict(size=15, color='#0F172A')),
             xaxis_title="Latency (Milliseconds)",
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#E2E8F0'),
+            font=dict(color='#334155'),
             height=260,
             margin=dict(l=20, r=20, t=40, b=20),
-            xaxis=dict(gridcolor='#334155')
+            xaxis=dict(gridcolor='#E2E8F0')
         )
         return fig
