@@ -242,6 +242,31 @@ class SurveillanceVideoProcessor:
                 r_ankle = (lms[28]['x'], lms[28]['y'])
                 l_ankle = (lms[27]['x'], lms[27]['y'])
 
+                # Real-time Keypoint Gesture & Threat Analysis
+                is_arm_raised = (r_wrist[1] < r_shoulder[1]) or (l_wrist[1] < l_shoulder[1]) or (r_wrist[1] < nose[1]) or (l_wrist[1] < nose[1])
+                is_collapsed = (r_shoulder[1] > h * 0.65) or (abs(r_shoulder[1] - r_hip[1]) < h * 0.15)
+
+                if is_arm_raised:
+                    p['action'] = "Aggressive"
+                    p['pose_type'] = "Aggressive"
+                    p['emotion'] = "Angry"
+                    p['risk'] = 0.88
+                    p['emotion_dict']['Angry'] = 0.85
+                    p['emotion_dict']['Neutral'] = 0.05
+                    p_risk = 0.88
+                    p_color = color_alert
+                elif is_collapsed:
+                    p['action'] = "Falling"
+                    p['pose_type'] = "Falling"
+                    p['emotion'] = "Fear"
+                    p['risk'] = 0.92
+                    p['emotion_dict']['Fear'] = 0.90
+                    p_risk = 0.92
+                    p_color = color_alert
+                l_knee = (lms[25]['x'], lms[25]['y'])
+                r_ankle = (lms[28]['x'], lms[28]['y'])
+                l_ankle = (lms[27]['x'], lms[27]['y'])
+
                 # Compute face bounding box around head landmarks
                 min_x = max(5, min(nose[0], r_eye[0], l_eye[0], r_ear[0], l_ear[0]) - int(w * 0.05))
                 max_x = min(w - 5, max(nose[0], r_eye[0], l_eye[0], r_ear[0], l_ear[0]) + int(w * 0.05))

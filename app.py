@@ -447,23 +447,28 @@ with tab1:
                 calc_prob = min(0.30, max(0.02, 0.05 + 0.08 * abs(frame_var)))
             calc_reliability = min(0.99, max(0.65, base_reliability + 0.04 * np.cos(current_frame_idx * 0.4)))
 
-        if input_img is not None or uploaded_video_bytes is not None:
-            dominant_emotions = [p['emotion'] for p in persons_data if 'emotion' in p]
-            if len(dominant_emotions) > 0 and all(e in ['NEUTRAL', 'HAPPY'] for e in dominant_emotions):
-                calc_category = "Normal Pedestrian Activity"
-                calc_prob = 0.05 + (0.02 * (current_frame_idx % 3))
-                calc_reliability = 0.96
-                base_face_w, base_pose_w, base_video_w, base_context_w = 0.46, 0.30, 0.14, 0.10
-            elif any(e == 'ANGRY' for e in dominant_emotions):
+        # Dynamic inference calculations based on frame content & detected keypoints
+        if frame_np is not None:
+            emotions_upper = [p['emotion'].upper() for p in persons_data if 'emotion' in p]
+            actions_upper = [p.get('action', '').upper() for p in persons_data]
+
+            # Check for aggressive keypoints / pose actions
+            if any(a in ['AGGRESSIVE', 'FIGHTING', 'RUNNING'] for a in actions_upper) or any(e in ['ANGRY', 'DISGUST'] for e in emotions_upper):
                 calc_category = "Physical Fighting / Aggression"
-                calc_prob = min(0.98, 0.92 + (0.02 * (current_frame_idx % 4)))
-                calc_reliability = 0.93
-                base_face_w, base_pose_w, base_video_w, base_context_w = 0.14, 0.34, 0.46, 0.06
-            elif any(e in ['FEAR', 'SAD'] for e in dominant_emotions):
+                calc_prob = min(0.98, max(0.75, base_prob + 0.85))
+                calc_reliability = min(0.98, max(0.70, base_reliability))
+                base_face_w, base_pose_w, base_video_w, base_context_w = 0.14, 0.36, 0.44, 0.06
+            elif any(a in ['FALLING', 'CROUCHING'] for a in actions_upper) or any(e in ['FEAR', 'SAD'] for e in emotions_upper):
                 calc_category = "Sudden Fall / Collapse"
-                calc_prob = min(0.95, 0.86 + (0.03 * (current_frame_idx % 3)))
-                calc_reliability = 0.88
+                calc_prob = min(0.95, max(0.70, base_prob + 0.80))
+                calc_reliability = min(0.95, max(0.65, base_reliability))
                 base_face_w, base_pose_w, base_video_w, base_context_w = 0.08, 0.54, 0.26, 0.12
+            elif any(e in ['HAPPY', 'NEUTRAL'] for e in emotions_upper) and not any(a in ['AGGRESSIVE', 'FALLING'] for a in actions_upper):
+                if scenario_category == "Normal Pedestrian Activity":
+                    calc_category = "Normal Pedestrian Activity"
+                    calc_prob = min(0.25, max(0.02, 0.05 + 0.02 * (current_frame_idx % 3)))
+                    calc_reliability = 0.96
+                    base_face_w, base_pose_w, base_video_w, base_context_w = 0.46, 0.30, 0.14, 0.10
 
         w_f = face_conf * base_face_w * (0.10 if face_occluded else 1.0)
         w_p = pose_conf * base_pose_w
