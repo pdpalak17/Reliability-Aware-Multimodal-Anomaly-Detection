@@ -8,6 +8,11 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 # Add parent directory to path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
