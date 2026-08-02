@@ -26,129 +26,193 @@ from utils.system_monitor import SystemMonitor
 
 # Page Configuration
 st.set_page_config(
-    page_title="Reliability-Aware Multimodal Anomaly Detection Platform",
+    page_title="SENTINEL-AI | Reliability-Aware Multimodal Anomaly Detection",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom Dark Mode & Glassmorphism CSS Styling
+# Handcrafted Hand-Tuned SOC Dark Design System
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
     /* Global Base */
+    html, body, [data-testid="stAppViewContainer"] {
+        background-color: #09090B !important;
+        color: #FAFAFA !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    }
+
+    /* Ambient Glow Main Background */
     .stApp {
-        background-color: #0F172A;
-        color: #F8FAFC;
+        background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.08) 0%, rgba(9, 9, 11, 1) 70%), #09090B !important;
     }
-    
-    /* Header Container */
-    .main-header-box {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-        margin-bottom: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        backdrop-filter: blur(10px);
+
+    /* Hero Header Container */
+    .hero-container {
+        background: linear-gradient(180deg, rgba(24, 24, 27, 0.7) 0%, rgba(18, 18, 21, 0.85) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 28px 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+        position: relative;
+        overflow: hidden;
     }
-    .main-title {
+    .hero-glow {
+        position: absolute;
+        top: -60px;
+        right: -60px;
+        width: 250px;
+        height: 250px;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.22) 0%, rgba(0, 0, 0, 0) 70%);
+        pointer-events: none;
+    }
+    .hero-title {
         font-size: 2.3rem;
         font-weight: 800;
-        background: linear-gradient(90deg, #38BDF8 0%, #8B5CF6 100%);
+        letter-spacing: -0.03em;
+        background: linear-gradient(135deg, #FFFFFF 0%, #A1A1AA 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 5px;
+        margin-bottom: 6px;
     }
-    .sub-title {
-        font-size: 1.05rem;
-        color: #94A3B8;
-        font-weight: 500;
+    .hero-subtitle {
+        font-size: 0.98rem;
+        color: #71717A;
+        font-weight: 400;
+        max-width: 850px;
     }
 
-    /* Glassmorphism Card Container */
-    .glass-card {
-        background: rgba(30, 41, 59, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 18px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-        margin-bottom: 18px;
-        backdrop-filter: blur(12px);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    /* Status Dot Pulse */
+    .pulse-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #10B981;
+        box-shadow: 0 0 10px #10B981;
+        animation: pulse-ring 2s infinite;
+        margin-right: 6px;
+        vertical-align: middle;
     }
-    .glass-card:hover {
+    @keyframes pulse-ring {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    /* Handcrafted Glassmorphism Card */
+    .soc-card {
+        background: rgba(18, 18, 21, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(16px);
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        margin-bottom: 20px;
+    }
+    .soc-card:hover {
+        border-color: rgba(59, 130, 246, 0.3);
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(56, 189, 248, 0.15);
+        box-shadow: 0 15px 35px -10px rgba(59, 130, 246, 0.15);
     }
 
-    /* Status Tags */
-    .normal-badge {
-        background: rgba(16, 185, 129, 0.2);
+    /* SOC Badges */
+    .soc-badge-normal {
+        background: rgba(16, 185, 129, 0.12);
         color: #34D399;
-        border: 1px solid #10B981;
-        padding: 4px 14px;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        padding: 4px 12px;
         border-radius: 20px;
+        font-size: 0.78rem;
         font-weight: 700;
-        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
         display: inline-block;
     }
-    .anomaly-badge {
-        background: rgba(239, 68, 68, 0.2);
+    .soc-badge-alert {
+        background: rgba(239, 68, 68, 0.12);
         color: #FCA5A5;
-        border: 1px solid #EF4444;
-        padding: 4px 14px;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        padding: 4px 12px;
         border-radius: 20px;
+        font-size: 0.78rem;
         font-weight: 700;
-        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
         display: inline-block;
     }
-    .warning-badge {
-        background: rgba(245, 158, 11, 0.2);
-        color: #FDE047;
-        border: 1px solid #F59E0B;
-        padding: 4px 14px;
+    .soc-badge-info {
+        background: rgba(59, 130, 246, 0.12);
+        color: #60A5FA;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        padding: 4px 12px;
         border-radius: 20px;
+        font-size: 0.78rem;
         font-weight: 700;
-        font-size: 0.85rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
         display: inline-block;
     }
 
-    /* Metric Values */
-    .metric-hero {
-        font-size: 2.2rem;
+    /* Metrics Values & Typography */
+    .soc-metric-value {
+        font-size: 2.3rem;
         font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1.1;
         margin: 8px 0;
     }
+    .soc-metric-label {
+        font-size: 0.82rem;
+        color: #71717A;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
     .text-emerald { color: #10B981; }
-    .text-rose { color: #EF4444; }
+    .text-rose { color: #F87171; }
     .text-amber { color: #F59E0B; }
     .text-cyan { color: #38BDF8; }
 
-    /* Custom Sidebar */
-    section[data-testid="stSidebar"] {
-        background-color: #0F172A !important;
-        border-right: 1px solid #1E293B;
-    }
-    
-    /* Tabs Styling */
+    /* Modern Tabs Bar */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: #1E293B;
+        gap: 6px;
+        background: #121215;
         padding: 6px;
-        border-radius: 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
     }
     .stTabs [data-baseweb="tab"] {
-        height: 44px;
-        white-space: pre;
+        height: 42px;
+        padding: 0 18px;
         border-radius: 8px;
-        color: #94A3B8;
+        color: #71717A;
         font-weight: 600;
+        font-size: 0.88rem;
+        transition: all 0.2s ease;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #38BDF8 !important;
-        color: #0F172A !important;
-        font-weight: 700 !important;
+        background: #27272A !important;
+        color: #FAFAFA !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Custom Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #0C0C0E !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+    }
+    section[data-testid="stSidebar"] .stMarkdown h2, 
+    section[data-testid="stSidebar"] .stMarkdown h3 {
+        color: #A1A1AA !important;
+        font-size: 0.82rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.08em !important;
+        margin-top: 18px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -181,19 +245,24 @@ def load_models():
 face_net, pose_net, video_net, context_net, fusion_net, xai_rag = load_models()
 processor = SurveillanceVideoProcessor()
 
-# Header Banner
+# Executive Hero Banner
 st.markdown("""
-<div class="main-header-box">
-    <div class="main-title">🛡️ Reliability-Aware Contextual Multimodal Anomaly Detection</div>
-    <div class="sub-title">Woxsen University | Authors: Palak Dwivedi, T. Sri Vaishnavi, Ojashwini Dubey, Spoorthi Reddy, Tiasha Roy | Supervisor: Dr. Uday Chandra</div>
+<div class="hero-container">
+    <div class="hero-glow"></div>
+    <div class="hero-title">🛡️ SENTINEL-AI | SOC Surveillance Platform</div>
+    <div class="hero-subtitle">
+        <span class="pulse-dot"></span> <b>SYSTEM OPERATIONAL</b> &nbsp;|&nbsp; 
+        Reliability-Aware Contextual Multimodal Anomaly Detection Framework &nbsp;|&nbsp; 
+        <i>Woxsen University Research Project</i>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar Configuration Controls
-st.sidebar.header("🕹️ Surveillance Control Panel")
+# Sidebar Control Panel
+st.sidebar.header("🕹️ SOC Operational Controls")
 
 preset_scenario = st.sidebar.selectbox(
-    "Select Surveillance Scenario Preset",
+    "Surveillance Scenario Preset",
     [
         "1. Normal Pedestrian Activity",
         "2. Sudden Fall / Collapse",
@@ -205,7 +274,7 @@ preset_scenario = st.sidebar.selectbox(
 )
 
 person_mode = st.sidebar.selectbox(
-    "Person Detection Mode",
+    "Person Tracking Mode",
     [
         "🤖 Auto-Detect Persons (Computer Vision Engine)",
         "1 Person",
@@ -224,7 +293,7 @@ crowd_count = st.sidebar.slider("Crowd Density Count", 0, 50, 3 if "Normal" in p
 baseline_norm = st.sidebar.slider("Baseline Normal Score", 0.0, 1.0, 0.9)
 face_occluded = st.sidebar.checkbox("Simulate Face Occlusion / Low Reliability", value=("Loitering" in preset_scenario or "Fall" in preset_scenario))
 
-st.sidebar.subheader("📡 Modality Reliability Noise Overrides")
+st.sidebar.subheader("📡 Sensor Reliability & Noise Controls")
 face_conf = st.sidebar.slider("Facial Modality Reliability (w_face)", 0.0, 1.0, 0.05 if face_occluded else 0.90)
 pose_conf = st.sidebar.slider("Pose Modality Reliability (w_pose)", 0.0, 1.0, 0.95)
 video_conf = st.sidebar.slider("Temporal Video Reliability (w_video)", 0.0, 1.0, 0.88)
@@ -279,10 +348,10 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # TAB 1: LIVE SURVEILLANCE & MULTI-PERSON DETECTION
 # ---------------------------------------------------------
 with tab1:
-    col_input, col_results = st.columns([1.1, 0.9])
+    col_input, col_results = st.columns([1.15, 0.85])
 
     with col_input:
-        st.subheader("📷 Camera Stream & Video Feed Input")
+        st.markdown("### 📷 Camera Stream & Video Feed Input")
         input_source = st.radio("Select Feed Source:", ["🔴 Live Stream", "Webcam Photo Capture", "Upload Image File", "Upload Video File (.mp4, .avi)"], horizontal=True)
 
         input_img = None
@@ -359,7 +428,7 @@ with tab1:
         st.image(annotated_frame, caption=f"MediaPipe 33-Landmark Skeleton Overlay [Frame #{current_frame_idx}]", use_container_width=True)
 
     with col_results:
-        st.subheader("🚨 Anomaly & Intent Diagnosis Engine")
+        st.markdown("### 🚨 Threat Diagnosis & Intent Engine")
 
         calc_prob = base_prob
         calc_reliability = base_reliability
@@ -426,7 +495,6 @@ with tab1:
         rel_pct = int(calc_reliability * 100)
         dominant_modality = max(attn_weights, key=attn_weights.get)
 
-        # Log event to IncidentLogger history
         logger.log_incident(
             anomaly_type=calc_category,
             risk_prob=calc_prob,
@@ -437,34 +505,34 @@ with tab1:
             rag_explanation=f"Detected {calc_category} with {prob_pct}% risk and {rel_pct}% reliability."
         )
 
-        if calc_category == "Normal Pedestrian Activity":
+        if "normal" in calc_category.lower():
             st.markdown(f"""
-            <div class="glass-card" style="border-left: 5px solid #10B981;">
-                <span class="normal-badge">NORMAL MONITORING STATUS</span>
-                <div class="metric-hero text-emerald">{prob_pct}% Anomaly Risk</div>
-                <div><b>Fusion Reliability Index:</b> <span class="text-cyan">{rel_pct}%</span></div>
+            <div class="soc-card" style="border-left: 4px solid #10B981;">
+                <span class="soc-badge-normal">NORMAL MONITORING STATUS</span>
+                <div class="soc-metric-value text-emerald">{prob_pct}% Anomaly Risk</div>
+                <div style="font-size: 0.88rem;"><b>Fusion Reliability Index:</b> <span class="text-cyan">{rel_pct}%</span></div>
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
-            <div class="glass-card" style="border-left: 5px solid #EF4444;">
-                <span class="anomaly-badge">⚠️ ANOMALY DETECTED: {calc_category.upper()}</span>
-                <div class="metric-hero text-rose">{prob_pct}% Anomaly Probability</div>
-                <div><b>Fusion Reliability Index:</b> <span class="text-cyan">{rel_pct}%</span></div>
+            <div class="soc-card" style="border-left: 4px solid #F87171;">
+                <span class="soc-badge-alert">⚠️ ANOMALY DETECTED: {calc_category.upper()}</span>
+                <div class="soc-metric-value text-rose">{prob_pct}% Risk Probability</div>
+                <div style="font-size: 0.88rem;"><b>Fusion Reliability Index:</b> <span class="text-cyan">{rel_pct}%</span></div>
             </div>
             """, unsafe_allow_html=True)
 
-        st.subheader("📊 Dynamic Attention Weights")
+        st.markdown("#### 📊 Dynamic Modality Attention Weights")
         for mod, weight in attn_weights.items():
             st.write(f"**{mod.capitalize()} Modality Weight:** `{weight*100:.1f}%`")
             st.progress(float(weight))
 
-        st.subheader("🤖 Grounded RAG Explanation Alert")
+        st.markdown("#### 🤖 Grounded RAG Alert Explanation")
         rag_alert = xai_rag.generate_rag_alert(fusion_res, metadata={'zone': f'Zone-{zone_id}', 'hour': hour})
         st.info(rag_alert['alert_text'])
 
     st.markdown("---")
-    st.subheader(f"👥 Tracked Individuals ({len(persons_data)} Person(s) Detected)")
+    st.markdown(f"### 👥 Tracked Individuals ({len(persons_data)} Person(s) Active)")
 
     person_count = len(persons_data)
     cards_per_row = 4 if person_count >= 4 else max(1, person_count)
@@ -474,11 +542,11 @@ with tab1:
         col_target = cols[idx % cards_per_row]
         with col_target:
             st.markdown(f"""
-            <div class="glass-card">
-                <h4 style="margin: 0; color: #F8FAFC;">👤 Person {person['id']}</h4>
-                <p style="margin: 4px 0;"><b>Action:</b> <span class="text-cyan">{person['action']}</span></p>
-                <p style="margin: 4px 0;"><b>Emotion:</b> <span class="text-amber">{person['emotion']} ({int(round(person['emotion_conf']*100 if person['emotion_conf'] <= 1.0 else person['emotion_conf']))}%)</span></p>
-                <p style="margin: 4px 0;"><b>Pose Status:</b> {person['pose_status']}</p>
+            <div class="soc-card">
+                <h4 style="margin: 0 0 8px 0; color: #FAFAFA;">👤 Person {person['id']}</h4>
+                <p style="margin: 3px 0; font-size: 0.86rem;"><b>Action:</b> <span class="text-cyan">{person['action']}</span></p>
+                <p style="margin: 3px 0; font-size: 0.86rem;"><b>Emotion:</b> <span class="text-amber">{person['emotion']} ({int(round(person['emotion_conf']*100 if person['emotion_conf'] <= 1.0 else person['emotion_conf']))}%)</span></p>
+                <p style="margin: 3px 0; font-size: 0.86rem;"><b>Pose Status:</b> {person['pose_status']}</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -490,13 +558,13 @@ with tab1:
             labels={'x': 'Facial Emotion Class', 'y': 'Probability'},
             title=f"7-Class Facial Emotion Breakdown (Person 1 - Frame #{current_frame_idx})",
             color=list(first_person_emotions.values()),
-            color_continuous_scale="Purples"
+            color_continuous_scale="Blues"
         )
         fig_emo.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
             font=dict(color='#E2E8F0'),
-            height=260,
+            height=250,
             margin=dict(l=20, r=20, t=40, b=20)
         )
         st.plotly_chart(fig_emo, use_container_width=True)
@@ -505,7 +573,7 @@ with tab1:
 # TAB 2: RELIABILITY-AWARE ATTENTION & EXPLAINABLE AI (XAI)
 # ---------------------------------------------------------
 with tab2:
-    st.subheader("🧠 Explainable AI (XAI) & Spatial Activation Visualizations")
+    st.markdown("### 🧠 Explainable AI (XAI) & Spatial Activation Visualizations")
 
     col_cam, col_shap = st.columns([1.1, 0.9])
 
@@ -517,7 +585,7 @@ with tab2:
         )
         blend_alpha = st.slider("Grad-CAM Heatmap Opacity (Alpha)", 0.1, 0.9, 0.5)
         gradcam_frame = XAIVisualizer.apply_gradcam_overlay(frame_np, gradcam_heatmap, alpha=blend_alpha)
-        st.image(gradcam_frame, caption=f"Grad-CAM Heatmap Activation [{calc_category}]", use_container_width=True)
+        st.image(gradcam_frame, caption=f"Grad-CAM Spatial Activation Overlay [{calc_category}]", use_container_width=True)
 
     with col_shap:
         st.markdown("#### 📈 SHAP Modality Feature Attribution Scores")
@@ -525,20 +593,20 @@ with tab2:
         fig_shap = XAIVisualizer.create_shap_bar_chart(shap_scores)
         st.plotly_chart(fig_shap, use_container_width=True)
 
-        st.markdown("#### 🎯 Multimodal Attention Radar Chart")
+        st.markdown("#### 🎯 Multimodal Attention Allocation Radar")
         fig_radar = XAIVisualizer.create_attention_radar_chart(attn_weights)
         st.plotly_chart(fig_radar, use_container_width=True)
 
     st.markdown("---")
-    st.subheader("📐 Mathematical Formulation & Architecture Specifications")
+    st.markdown("### 📐 Mathematical Formulation & Reliability Gating")
     st.markdown(r"""
-    The framework computes dynamic modality confidence weights $w_m \in [0, 1]$ for each modality $m \in \{f, p, v, c\}$:
+    The framework computes dynamic modality confidence weights $w_m \in [0, 1]$ for each modality branch $m \in \{f, p, v, c\}$:
     $$
     \tilde{\alpha}_m = \exp\left(\frac{W_a h_m + b_a}{\tau}\right) \cdot w_m
     \quad \implies \quad
     \alpha_m = \frac{\tilde{\alpha}_m}{\sum_{k} \tilde{\alpha}_k}
     $$
-    **Overall Reliability Index:**
+    **Overall Multimodal Reliability Index:**
     $$
     R = \sum_{m \in \{f, p, v, c\}} \alpha_m \cdot w_m
     $$
@@ -548,26 +616,28 @@ with tab2:
 # TAB 3: LOCAL RAG INCIDENT PRECEDENT ENGINE
 # ---------------------------------------------------------
 with tab3:
-    st.subheader("🤖 Local RAG Precedent Search & Grounded Explanations")
-    st.markdown("Query the local surveillance knowledge base using vector similarity matching over historical precedents.")
+    st.markdown("### 🤖 Local RAG Precedent Search & Grounded Explanations")
+    st.markdown("Search historical surveillance incident vector embeddings from `incident_kb.json` using scikit-learn TF-IDF and Cosine Vector Similarity.")
 
     precedent = xai_rag.retrieve_incident_precedent(calc_category, attn_weights, zone=f"Zone-{zone_id}")
 
-    col_prec1, col_prec2 = st.columns([1, 1])
+    col_prec1, col_prec2 = st.columns([1.05, 0.95])
     with col_prec1:
+        sim_score_str = f" ({int(precedent.get('similarity_score', 0.95)*100)}% Vector Match)" if 'similarity_score' in precedent else ""
         st.markdown(f"""
-        <div class="glass-card" style="border-left: 5px solid #8B5CF6;">
-            <h3 style="margin-top:0; color:#38BDF8;">📌 Top Matched Incident Precedent: {precedent.get('id', 'INC-101')}</h3>
-            <p><b>Category:</b> <span class="text-amber">{precedent.get('category', 'N/A')}</span></p>
-            <p><b>Zone Location:</b> {precedent.get('zone', 'N/A')}</p>
-            <p><b>Primary Modality:</b> {precedent.get('primary_modality', 'N/A')}</p>
-            <p><b>Historical Description:</b> <i>"{precedent.get('description', '')}"</i></p>
-            <p><b>Recommended Security Action:</b> <span class="text-emerald">{precedent.get('recommended_action', '')}</span></p>
+        <div class="soc-card" style="border-left: 4px solid #60A5FA;">
+            <span class="soc-badge-info">TOP MATCHED INCIDENT PRECEDENT</span>
+            <h3 style="margin: 10px 0 6px 0; color: #FAFAFA;">📌 {precedent.get('id', 'INC-101')}{sim_score_str}</h3>
+            <p style="margin: 4px 0; font-size: 0.9rem;"><b>Category:</b> <span class="text-amber">{precedent.get('category', 'N/A')}</span></p>
+            <p style="margin: 4px 0; font-size: 0.9rem;"><b>Zone Location:</b> {precedent.get('zone', 'N/A')}</p>
+            <p style="margin: 4px 0; font-size: 0.9rem;"><b>Primary Modality:</b> {precedent.get('primary_modality', 'N/A')}</p>
+            <p style="margin: 8px 0; font-size: 0.9rem; color: #A1A1AA;"><b>Historical Precedent Note:</b> <i>"{precedent.get('description', '')}"</i></p>
+            <p style="margin: 6px 0; font-size: 0.9rem;"><b>Recommended Security Action:</b> <span class="text-emerald">{precedent.get('recommended_action', '')}</span></p>
         </div>
         """, unsafe_allow_html=True)
 
     with col_prec2:
-        st.markdown("#### 📚 Knowledge Base Incident Examples")
+        st.markdown("#### 📚 Knowledge Base Incident Precedent Vectors")
         kb_data = xai_rag.load_knowledge_base()
         kb_df = pd.DataFrame(kb_data)
         st.dataframe(kb_df[['id', 'category', 'zone', 'primary_modality', 'recommended_action']], use_container_width=True, height=260)
@@ -576,7 +646,7 @@ with tab3:
 # TAB 4: EXECUTIVE ANALYTICS & HISTORICAL INCIDENT LOG
 # ---------------------------------------------------------
 with tab4:
-    st.subheader("📊 Executive Surveillance Analytics & Event Log")
+    st.markdown("### 📊 Executive Surveillance Analytics & Event Log")
 
     history_df = logger.get_history_dataframe()
     total_events = len(logger.history)
@@ -585,10 +655,10 @@ with tab4:
     avg_rel = round(np.mean([e.get('reliability_score', 0) for e in logger.history])*100, 1) if logger.history else 92.4
 
     col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
-    col_kpi1.markdown(f'<div class="glass-card"><div class="sub-title">Total Logged Incidents</div><div class="metric-hero text-cyan">{total_events}</div></div>', unsafe_allow_html=True)
-    col_kpi2.markdown(f'<div class="glass-card"><div class="sub-title">High Risk Alerts</div><div class="metric-hero text-rose">{high_risk_count}</div></div>', unsafe_allow_html=True)
-    col_kpi3.markdown(f'<div class="glass-card"><div class="sub-title">Real-Time FPS</div><div class="metric-hero text-emerald">{avg_fps}</div></div>', unsafe_allow_html=True)
-    col_kpi4.markdown(f'<div class="glass-card"><div class="sub-title">Mean System Reliability</div><div class="metric-hero text-amber">{avg_rel}%</div></div>', unsafe_allow_html=True)
+    col_kpi1.markdown(f'<div class="soc-card"><div class="soc-metric-label">Total Logged Incidents</div><div class="soc-metric-value text-cyan">{total_events}</div></div>', unsafe_allow_html=True)
+    col_kpi2.markdown(f'<div class="soc-card"><div class="soc-metric-label">High Risk Alerts</div><div class="soc-metric-value text-rose">{high_risk_count}</div></div>', unsafe_allow_html=True)
+    col_kpi3.markdown(f'<div class="soc-card"><div class="soc-metric-label">Real-Time FPS</div><div class="soc-metric-value text-emerald">{avg_fps}</div></div>', unsafe_allow_html=True)
+    col_kpi4.markdown(f'<div class="soc-card"><div class="soc-metric-label">Mean System Reliability</div><div class="soc-metric-value text-amber">{avg_rel}%</div></div>', unsafe_allow_html=True)
 
     col_chart1, col_chart2 = st.columns([1, 1])
 
@@ -596,15 +666,15 @@ with tab4:
         st.markdown("#### 📈 Incident Category Risk Distribution")
         if logger.history:
             cats = [e.get('category', 'Normal') for e in logger.history]
-            fig_pie = px.pie(names=cats, title="Logged Event Category Ratio", color_discrete_sequence=px.colors.sequential.PuBu)
+            fig_pie = px.pie(names=cats, title="Logged Event Category Ratio", color_discrete_sequence=px.colors.sequential.Darkmint)
             fig_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#E2E8F0'), height=260)
             st.plotly_chart(fig_pie, use_container_width=True)
 
     with col_chart2:
-        st.markdown("#### 🌐 Primary Modality Drivers")
+        st.markdown("#### 🌐 Primary Modality Trigger Frequency")
         if logger.history:
             mods = [e.get('dominant_modality', 'Pose') for e in logger.history]
-            fig_bar = px.histogram(x=mods, labels={'x': 'Modality Driver'}, title="Modality Trigger Frequency", color_discrete_sequence=['#38BDF8'])
+            fig_bar = px.histogram(x=mods, labels={'x': 'Modality Driver'}, title="Modality Trigger Frequency", color_discrete_sequence=['#60A5FA'])
             fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#E2E8F0'), height=260)
             st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -627,7 +697,7 @@ with tab4:
 # TAB 5: SYSTEM MONITOR & SETTINGS
 # ---------------------------------------------------------
 with tab5:
-    st.subheader("⚙️ System Hardware Health & Inference Latency Profiling")
+    st.markdown("### ⚙️ System Hardware Health & Inference Latency Profiling")
 
     hw = monitor.get_hardware_metrics()
 
@@ -638,11 +708,11 @@ with tab5:
         st.plotly_chart(monitor.create_gauge_chart(hw['ram_percent'], "RAM Utilization"), use_container_width=True)
     with col_g3:
         st.markdown(f"""
-        <div class="glass-card" style="height: 180px;">
-            <div class="sub-title">GPU Status & Latency</div>
-            <div style="margin-top: 15px;"><b>GPU Device:</b> <span class="text-cyan">{hw['gpu_status']}</span></div>
-            <div style="margin-top: 10px;"><b>RAM Used:</b> {hw['ram_used_gb']} GB / {hw['ram_total_gb']} GB</div>
-            <div style="margin-top: 10px;"><b>Total Latency:</b> <span class="text-emerald">{hw['total_inference_latency']} ms</span></div>
+        <div class="soc-card" style="height: 180px;">
+            <div class="soc-metric-label">GPU Acceleration & Hardware Memory</div>
+            <div style="margin-top: 15px; font-size: 0.9rem;"><b>GPU Device:</b> <span class="text-cyan">{hw['gpu_status']}</span></div>
+            <div style="margin-top: 10px; font-size: 0.9rem;"><b>RAM Used:</b> {hw['ram_used_gb']} GB / {hw['ram_total_gb']} GB</div>
+            <div style="margin-top: 10px; font-size: 0.9rem;"><b>Total Pipeline Latency:</b> <span class="text-emerald">{hw['total_inference_latency']} ms</span></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -653,4 +723,4 @@ with tab5:
         st.text(f"[{log['timestamp']}] [{log['level']}] {log['message']}")
 
 st.markdown("---")
-st.caption("© 2026 Woxsen University | Reliability-Aware Contextual Multimodal Anomaly Detection Project | All Rights Reserved.")
+st.caption("© 2026 Woxsen University | SENTINEL-AI Reliability-Aware Multimodal Anomaly Detection Platform | All Rights Reserved.")
