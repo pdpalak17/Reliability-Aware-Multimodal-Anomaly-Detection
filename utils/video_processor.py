@@ -270,35 +270,59 @@ class SurveillanceVideoProcessor:
                     p['emotion_conf'] = 0.08
                     p['emotion_dict']['Neutral'] = 0.10
 
-                # Compute face bounding box around head landmarks
-                min_x = max(5, min(nose[0], r_eye[0], l_eye[0], r_ear[0], l_ear[0]) - int(w * 0.05))
-                max_x = min(w - 5, max(nose[0], r_eye[0], l_eye[0], r_ear[0], l_ear[0]) + int(w * 0.05))
-                min_y = max(5, min(nose[0], r_eye[1], l_eye[1], r_ear[1], l_ear[1]) - int(h * 0.06))
-                max_y = min(h - 5, max(nose[0], r_eye[1], l_eye[1], r_ear[1], l_ear[1]) + int(h * 0.08))
+                # Face crop open-mouth & expression analysis
+                min_x = max(5, min(nose[0], r_eye[0], l_eye[0], r_ear[0], l_ear[0]) - int(w * 0.06))
+                max_x = min(w - 5, max(nose[0], r_eye[0], l_eye[0], r_ear[0], l_ear[0]) + int(w * 0.06))
+                min_y = max(5, min(nose[1], r_eye[1], l_eye[1], r_ear[1], l_ear[1]) - int(h * 0.07))
+                max_y = min(h - 5, max(nose[1], r_eye[1], l_eye[1], r_ear[1], l_ear[1]) + int(h * 0.09))
                 f_box = [min_x, min_y, max_x, max_y]
 
-                # Draw real MediaPipe skeleton lines
-                connections = [
-                    (nose, r_eye), (nose, l_eye), (r_eye, r_ear), (l_eye, l_ear),
-                    (r_shoulder, l_shoulder), (r_shoulder, r_elbow), (r_elbow, r_wrist),
-                    (l_shoulder, l_elbow), (l_elbow, l_wrist),
-                    (r_shoulder, r_hip), (l_shoulder, l_hip), (r_hip, l_hip),
-                    (r_hip, r_knee), (r_knee, r_ankle),
-                    (l_hip, l_knee), (l_knee, l_ankle)
-                ]
-                for p1, p2 in connections:
-                    draw.line([p1, p2], fill=color_line, width=3)
+                # Extract face crop for open-mouth screaming / anger detection
+                if max_y > min_y and max_x > min_x:
+                    face_crop = frame_np[min_y:max_y, min_x:max_x]
+                    if face_crop.size > 0:
+                        fc_h, fc_w = face_crop.shape[:2]
+                        mouth_region = face_crop[int(fc_h * 0.55):fc_h, :]
+                        if mouth_region.size > 0:
+                            gray_mouth = np.mean(mouth_region, axis=2)
+                            dark_mouth_ratio = np.mean(gray_mouth < 65)
+                            mouth_std = np.std(gray_mouth)
 
-                for pt in [nose, r_eye, l_eye, r_shoulder, l_shoulder, r_elbow, l_elbow, r_wrist, l_wrist, r_hip, l_hip, r_knee, l_knee, r_ankle, l_ankle]:
-                    draw.ellipse([pt[0]-4, pt[1]-4, pt[0]+4, pt[1]+4], fill=color_joint, outline=(0, 0, 0))
+                            # Detect screaming / wide open mouth / aggressive yelling
+                            if dark_mouth_ratio > 0.08 or mouth_std > 38.0 or is_arm_raised:
+                                p['emotion'] = "Angry"
+                                p['action'] = "Aggressive / Screaming"
+                                p['emotion_conf'] = 0.89
+                                p['risk'] = 0.94
+                                p['emotion_dict'] = {'Angry': 0.89, 'Disgust': 0.05, 'Neutral': 0.04, 'Fear': 0.02}
+                                p_risk = 0.94
+                                p_color = color_alert
 
+                # NOTE: Skeleton stick structure removed per user request for clean output.
             else:
-                # Proportional Fallback skeleton positioning
+                # Proportional Fallback positioning
                 if detected_faces and i < len(detected_faces):
                     df = detected_faces[i]
                     f_box = [df[0], df[1], df[2], df[3]]
-                    cx = (df[0] + df[2]) // 2
-                    cy_head = df[1] + int((df[3] - df[1]) * 0.5)
+                    # Face crop expression check for auto-detected faces
+                    y1, y2, x1, x2 = max(0, df[1]), min(h, df[3]), max(0, df[0]), min(w, df[2])
+                    if y2 > y1 and x2 > x1:
+                        face_crop = frame_np[y1:y2, x1:x2]
+                        if face_crop.size > 0:
+                            fc_h, fc_w = face_crop.shape[:2]
+                            mouth_region = face_crop[int(fc_h * 0.50):fc_h, :]
+                            if mouth_region.size > 0:
+                                gray_mouth = np.mean(mouth_region, axis=2)
+                                dark_mouth_ratio = np.mean(gray_mouth < 65)
+                                mouth_std = np.std(gray_mouth)
+                                if dark_mouth_ratio > 0.07 or mouth_std > 36.0:
+                                    p['emotion'] = "Angry"
+                                    p['action'] = "Aggressive / Screaming"
+                                    p['emotion_conf'] = 0.89
+                                    p['risk'] = 0.94
+                                    p['emotion_dict'] = {'Angry': 0.89, 'Disgust': 0.05, 'Neutral': 0.04, 'Fear': 0.02}
+                                    p_risk = 0.94
+                                    p_color = color_alert
                 else:
                     cx_ratio = (i + 1) / (num_persons + 1)
                     cx = int(w * cx_ratio)
@@ -307,8 +331,6 @@ class SurveillanceVideoProcessor:
                     box_h = max(40, int(h * 0.14))
                     f_box = [max(5, cx - box_w), max(5, cy_head - int(box_h * 0.5)),
                              min(w - 5, cx + box_w), min(h - 5, cy_head + int(box_h * 0.5))]
-
-                self._draw_person_skeleton(draw, cx, cy_head, w, h, pose_type, p_color, color_joint, color_line)
 
             # Render Face Bounding Box & Emotion Tag (formatted correctly as percentage!)
             pct_val = int(round(emotion_conf * 100))

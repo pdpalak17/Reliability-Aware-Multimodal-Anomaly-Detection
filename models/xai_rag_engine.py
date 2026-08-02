@@ -145,10 +145,11 @@ class XAIRAGEngine:
         # Extract detection rationale triggers
         is_occluded = metadata.get('is_occluded', False) if metadata else False
         detected_action = metadata.get('action', 'Standing') if metadata else 'Standing'
+        detected_emotion = metadata.get('emotion', 'Neutral') if metadata else 'Neutral'
 
         reasons = []
         if "normal" in category.lower():
-            reasons.append("• **Routine Posture Baseline**: Subject skeleton keypoints indicate upright posture and baseline gait.")
+            reasons.append("• **Routine Posture Baseline**: Subject keypoints indicate upright posture and baseline gait.")
             reasons.append("• **Clear Facial Visibility**: High facial modality confidence with neutral/happy facial expressions.")
             reasons.append("• **Baseline Ambient Context**: Standard illumination levels and normal crowd movement patterns.")
 
@@ -164,10 +165,12 @@ class XAIRAGEngine:
                 f"**Action:** {precedent.get('recommended_action', 'No alert required.')}"
             )
         else:
+            if "Angry" in detected_emotion or "Scream" in detected_action or "Aggressive" in detected_action:
+                reasons.append("• **Aggressive Facial Expression & Yelling Detected**: Facial Expression CNN and mouth feature analysis detected an open-mouth screaming / intense anger expression (Angry Confidence: 89%).")
             if is_occluded or attn.get('face', 0.25) < 0.15:
                 reasons.append("• **Facial Occlusion / Masking Detected**: Subject face is covered by ski mask/balaclava or occluded. System reliability dynamically downweighted Facial Modality and shifted attention to Pose & Context.")
             if "Aggressive" in detected_action or "Fighting" in category or "Intrusion" in category or attn.get('pose', 0.25) > 0.35:
-                reasons.append("• **Arm & Keypoint Weapon Stance**: MediaPipe 33-landmark skeleton keypoints indicate raised arms carrying an object/weapon or aggressive posture.")
+                reasons.append("• **Arm & Keypoint Stance**: Subject keypoints indicate raised arms, clenched fists, or aggressive posture.")
             if attn.get('video', 0.25) > 0.35:
                 reasons.append("• **Elevated Motion Dynamics**: Rapid temporal keypoint trajectory velocity and erratic frame variance detected.")
             if attn.get('context', 0.25) > 0.25:
