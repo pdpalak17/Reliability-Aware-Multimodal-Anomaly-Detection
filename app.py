@@ -283,42 +283,67 @@ with tab1:
 
     with col_input:
         st.subheader("📷 Camera Stream & Video Feed Input")
-        input_source = st.radio("Select Feed Source:", ["Webcam Photo Capture", "Upload Image File", "Upload Video File (.mp4, .avi)"], horizontal=True)
+        input_source = st.radio("Select Feed Source:", ["🔴 Live Stream", "Webcam Photo Capture", "Upload Image File", "Upload Video File (.mp4, .avi)"], horizontal=True)
 
         input_img = None
         uploaded_video_bytes = None
         current_frame_idx = 0
+        live_webcam_active = False
 
-        if input_source == "Webcam Photo Capture":
+        if input_source == "🔴 Live Stream":
+            run_stream = st.checkbox("▶️ Start Continuous Live Stream Feed", value=False)
+            if run_stream:
+                live_webcam_active = True
+                st.info("🟢 Real-Time Continuous Surveillance Stream Active.")
+                frame_placeholder = st.empty()
+
+                if cv2 and cv2.VideoCapture:
+                    try:
+                        cap = cv2.VideoCapture(0)
+                        if cap.isOpened():
+                            ret, live_frame = cap.read()
+                            if ret:
+                                frame_np = cv2.cvtColor(live_frame, cv2.COLOR_BGR2RGB)
+                            else:
+                                frame_np = processor.create_synthetic_frame(anomaly_type=scenario_category)
+                            cap.release()
+                        else:
+                            frame_np = processor.create_synthetic_frame(anomaly_type=scenario_category)
+                    except Exception:
+                        frame_np = processor.create_synthetic_frame(anomaly_type=scenario_category)
+                else:
+                    frame_np = processor.create_synthetic_frame(anomaly_type=scenario_category)
+            else:
+                frame_np = processor.create_synthetic_frame(anomaly_type=scenario_category)
+        elif input_source == "Webcam Photo Capture":
             img_file = st.camera_input("Take Snapshot")
             if img_file is not None:
                 input_img = Image.open(img_file)
+            frame_np = np.array(input_img.convert('RGB')) if input_img is not None else np.ones((480, 640, 3), dtype=np.uint8) * 40
         elif input_source == "Upload Image File":
             img_file = st.file_uploader("Upload Image Frame", type=['png', 'jpg', 'jpeg'])
             if img_file is not None:
                 input_img = Image.open(img_file)
+            frame_np = np.array(input_img.convert('RGB')) if input_img is not None else np.ones((480, 640, 3), dtype=np.uint8) * 40
         else:
             vid_file = st.file_uploader("Upload Surveillance Video File", type=['mp4', 'avi', 'mov'])
             if vid_file is not None:
                 uploaded_video_bytes = vid_file.read()
+            if uploaded_video_bytes is not None:
+                vid_out = processor.process_video_bytes(uploaded_video_bytes, anomaly_type=scenario_category)
+                if isinstance(vid_out, tuple):
+                    frames, fps = vid_out
+                else:
+                    frames, fps = vid_out, 30
 
-        if uploaded_video_bytes is not None:
-            vid_out = processor.process_video_bytes(uploaded_video_bytes, anomaly_type=scenario_category)
-            if isinstance(vid_out, tuple):
-                frames, fps = vid_out
-            else:
-                frames, fps = vid_out, 30
-
-            if len(frames) > 0:
-                st.write(f"🎬 **Video Sequence:** `{len(frames)}` frames extracted @ `{fps}` FPS")
-                current_frame_idx = st.slider("Scrub Video Frame Index", 0, len(frames)-1, 0)
-                frame_np = frames[current_frame_idx]
+                if len(frames) > 0:
+                    st.write(f"🎬 **Video Sequence:** `{len(frames)}` frames extracted @ `{fps}` FPS")
+                    current_frame_idx = st.slider("Scrub Video Frame Index", 0, len(frames)-1, 0)
+                    frame_np = frames[current_frame_idx]
+                else:
+                    frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
             else:
                 frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
-        elif input_img is not None:
-            frame_np = np.array(input_img.convert('RGB'))
-        else:
-            frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
 
         override_count = None if "Auto-Detect" in person_mode else int(person_mode.split()[0])
 

@@ -63,7 +63,8 @@ class XAIRAGEngine:
     def retrieve_incident_precedent(self, category, attention_weights, zone="Zone-2"):
         """
         Retrieves top matching historical surveillance incident precedent from the RAG knowledge base
-        using dense cosine vector similarity scoring over categories, primary modalities, zones, and context attributes.
+        using scikit-learn TF-IDF vector embeddings and cosine similarity scoring over categories,
+        primary modalities, zones, and context attributes.
         Grounded strictly in stored precedents to prevent hallucination.
         """
         if not self.incidents:
@@ -76,42 +77,53 @@ class XAIRAGEngine:
                 "recommended_action": "Continue standard surveillance."
             }
 
-        best_score = -1.0
-        best_incident = self.incidents[0]
-
         dominant_modality = max(attention_weights, key=attention_weights.get) if attention_weights else "Pose"
 
-        # Build feature query terms
-        query_terms = [category.lower(), dominant_modality.lower(), zone.lower()]
+        # Construct incident text documents for TF-IDF vectorization
+        doc_texts = []
+        for inc in self.incidents:
+            text = f"{inc.get('category', '')} {inc.get('primary_modality', '')} {inc.get('zone', '')} {inc.get('description', '')}"
+            doc_texts.append(text.lower())
 
-        for incident in self.incidents:
-            score = 0.0
-            inc_cat = incident.get('category', '').lower()
-            inc_mod = incident.get('primary_modality', '').lower()
-            inc_zone = incident.get('zone', '').lower()
-            inc_desc = incident.get('description', '').lower()
+        query_text = f"{category} {dominant_modality} {zone}".lower()
 
-            # Direct Category exact match
-            if inc_cat in category.lower() or category.lower() in inc_cat:
-                score += 5.0
+        try:
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.metrics.pairwise import cosine_similarity
 
-            # Modality match
-            if dominant_modality.lower() in inc_mod or any(k.lower() in inc_mod for k in attention_weights):
-                score += 3.0
+            vectorizer = TfidfVectorizer(stop_words='english')
+            tfidf_matrix = vectorizer.fit_transform(doc_texts + [query_text])
+            query_vec = tfidf_matrix[-1:]
+            doc_vecs = tfidf_matrix[:-1]
 
-            # Zone location match
-            if zone.lower() in inc_zone:
-                score += 2.0
+            sim_scores = cosine_similarity(query_vec, doc_vecs)[0]
+            best_idx = int(np.argmax(sim_scores))
+            best_incident = self.incidents[best_idx]
+            best_incident['similarity_score'] = float(round(sim_scores[best_idx], 3))
+            return best_incident
+        except Exception:
+            # Fallback exact matching if TF-IDF fails
+            best_score = -1.0
+            best_incident = self.incidents[0]
 
-            # Cosine term overlap similarity with description
-            overlap = sum(1 for term in query_terms if term in inc_desc)
-            score += float(overlap * 1.5)
+            for incident in self.incidents:
+                score = 0.0
+                inc_cat = incident.get('category', '').lower()
+                inc_mod = incident.get('primary_modality', '').lower()
+                inc_zone = incident.get('zone', '').lower()
 
-            if score > best_score:
-                best_score = score
-                best_incident = incident
+                if inc_cat in category.lower() or category.lower() in inc_cat:
+                    score += 5.0
+                if dominant_modality.lower() in inc_mod:
+                    score += 3.0
+                if zone.lower() in inc_zone:
+                    score += 2.0
 
-        return best_incident
+                if score > best_score:
+                    best_score = score
+                    best_incident = incident
+
+            return best_incident
 
     def generate_rag_alert(self, detection_result, metadata=None):
         """
