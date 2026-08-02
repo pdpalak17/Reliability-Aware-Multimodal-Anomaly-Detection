@@ -152,24 +152,11 @@ class MultimodalInferenceEngine:
     # ------------------------------------------------------------------
 
     def extract_face_features(self, frame_np):
-        """
-        Extracts a 64-dimensional facial feature vector from the frame.
-
-        Strategy:
-          1. Detect face with OpenCV Haar cascade
-          2. Crop face region and resize to 8x8 (64 px)
-          3. Compute grayscale intensity as proxy for CNN bottleneck features
-          4. Apply class-signal normalization shift matching training distribution
-
-        Returns:
-          features_64: np.ndarray (64,)
-          detected:    bool  (True if face was found)
-          face_box:    tuple (x1,y1,x2,y2) or None
-        """
-        h, w = frame_np.shape[:2]
-
-        if not HAS_OPENCV or self._face_cascade is None or frame_np is None:
+        if isinstance(frame_np, tuple):
+            frame_np = frame_np[0]
+        if not HAS_OPENCV or self._face_cascade is None or frame_np is None or not isinstance(frame_np, np.ndarray):
             return np.zeros(64, dtype=np.float32), False, None
+        h, w = frame_np.shape[:2]
 
         try:
             gray = cv2.cvtColor(frame_np, cv2.COLOR_RGB2GRAY)
@@ -221,17 +208,9 @@ class MultimodalInferenceEngine:
         return features.astype(np.float32), True, face_box
 
     def extract_pose_features(self, frame_np):
-        """
-        Extracts 99-dimensional body pose feature vector using MediaPipe Pose.
-        Returns 33 keypoints with (x_norm, y_norm, visibility) per joint.
-
-        If MediaPipe unavailable, returns zero vector with is_detected=False.
-
-        Returns:
-          keypoints_99: np.ndarray (99,)  flattened [x0,y0,vis0, x1,y1,vis1, ...]
-          detected:     bool
-        """
-        if not HAS_MEDIAPIPE or self._mp_pose is None or frame_np is None:
+        if isinstance(frame_np, tuple):
+            frame_np = frame_np[0]
+        if not HAS_MEDIAPIPE or self._mp_pose is None or frame_np is None or not isinstance(frame_np, np.ndarray):
             return np.zeros(99, dtype=np.float32), False
 
         try:
@@ -251,20 +230,10 @@ class MultimodalInferenceEngine:
             return np.zeros(99, dtype=np.float32), False
 
     def extract_video_features(self, frame_np, prev_frame=None):
-        """
-        Generates a (16, 128)-dim temporal feature sequence from a single frame.
-
-        For a single image (no video sequence), we create a proxy sequence using:
-        - Spatial frequency features (DCT-like) from the frame
-        - Simulated optical flow by comparing edge-detected sub-regions
-        - This produces features in the same distribution as the UCF-Crime training data
-
-        If prev_frame is provided (video mode), actual frame-to-frame differences
-        are computed for better temporal signal.
-
-        Returns:
-          sequence: np.ndarray (16, 128)
-        """
+        if isinstance(frame_np, tuple):
+            frame_np = frame_np[0]
+        if frame_np is None or not isinstance(frame_np, np.ndarray):
+            return np.zeros((16, 128), dtype=np.float32)
         h, w = frame_np.shape[:2]
 
         # Convert to grayscale
@@ -330,30 +299,9 @@ class MultimodalInferenceEngine:
     # ------------------------------------------------------------------
 
     def run_inference(self, frame_np, metadata=None, prev_frame=None, verbose=False):
-        """
-        Full end-to-end multimodal inference on a single frame.
-
-        Args:
-          frame_np:  np.ndarray (H, W, 3) RGB image
-          metadata:  dict with keys: zone_id, hour, illumination, crowd_count, baseline_norm
-          prev_frame: optional previous frame for optical flow
-          verbose:   if True, prints all intermediate outputs
-
-        Returns:
-          dict with all pipeline outputs:
-            - face_emotion, face_confidence, face_features
-            - pose_class, pose_confidence, pose_features
-            - video_class, video_confidence, video_features
-            - context_risk, context_confidence, context_features
-            - attention_weights (dict: face/pose/video/context)
-            - category_probs (dict: Normal/Fall/Fighting/Panic/Loitering)
-            - predicted_category (str, full human-readable label)
-            - anomaly_probability (float 0..1, from fusion net)
-            - reliability_score (float 0..1, from fusion net)
-            - raw_logits (dict: per-branch logits before softmax)
-            - checkpoints_loaded (dict)
-        """
-        if frame_np is None or frame_np.size == 0:
+        if isinstance(frame_np, tuple):
+            frame_np = frame_np[0]
+        if frame_np is None or not isinstance(frame_np, np.ndarray) or frame_np.size == 0:
             frame_np = np.zeros((480, 640, 3), dtype=np.uint8) + 30
 
         if metadata is None:

@@ -44,10 +44,12 @@ class SurveillanceVideoProcessor:
         Runs OpenCV multi-scale face detection on the camera frame to locate human faces.
         Returns list of bounding boxes [(x1, y1, x2, y2), ...] sorted from left to right.
         """
-        if not HAS_OPENCV or self.face_cascade is None or frame_np is None:
+        if isinstance(frame_np, tuple):
+            frame_np = frame_np[0]
+        if not HAS_OPENCV or self.face_cascade is None or frame_np is None or not isinstance(frame_np, np.ndarray):
             return []
         try:
-            h, w, _ = frame_np.shape
+            h, w = frame_np.shape[:2]
             gray = cv2.cvtColor(frame_np, cv2.COLOR_RGB2GRAY)
             gray_eq = cv2.equalizeHist(gray)
 
@@ -74,7 +76,9 @@ class SurveillanceVideoProcessor:
         Runs MediaPipe Pose on input RGB frame to extract real 33 skeleton landmark coordinates (x, y, visibility).
         Returns list of landmark dictionaries or None.
         """
-        if not HAS_MEDIAPIPE or self.mp_pose is None or frame_np is None:
+        if isinstance(frame_np, tuple):
+            frame_np = frame_np[0]
+        if not HAS_MEDIAPIPE or self.mp_pose is None or frame_np is None or not isinstance(frame_np, np.ndarray):
             return None
         try:
             with self.mp_pose.Pose(
@@ -145,13 +149,15 @@ class SurveillanceVideoProcessor:
         )
 
     def process_camera_frame_multi(self, frame_np, anomaly_type="Normal", is_occluded=False, prob=0.1, reliability=0.9, override_person_count=None, **kwargs):
+        if isinstance(frame_np, tuple):
+            frame_np = frame_np[0]
         num_persons = override_person_count
         detected_faces = self.detect_faces_in_frame(frame_np)
         if num_persons is None:
             if detected_faces:
                 num_persons = len(detected_faces)
             else:
-                num_persons = 1 if frame_np is not None else (3 if anomaly_type == "Normal" else 2)
+                num_persons = 1 if frame_np is not None and isinstance(frame_np, np.ndarray) else (3 if anomaly_type == "Normal" else 2)
 
         persons_data = self._generate_default_persons_data(anomaly_type, is_occluded, prob, num_persons=num_persons)
         annotated_img, updated_persons_data = self.process_multi_person_frame(
@@ -166,10 +172,12 @@ class SurveillanceVideoProcessor:
         return annotated_img, updated_persons_data
 
     def process_multi_person_frame(self, frame_np, persons_data=None, anomaly_type="Normal", is_occluded=False, prob=0.1, reliability=0.9, num_persons=None):
-        if frame_np is None or frame_np.size == 0:
+        if isinstance(frame_np, tuple):
+            frame_np = frame_np[0]
+        if frame_np is None or not isinstance(frame_np, np.ndarray) or frame_np.size == 0:
             frame_np = np.zeros((480, 800, 3), dtype=np.uint8) + 30
 
-        h, w, _ = frame_np.shape
+        h, w = frame_np.shape[:2]
         img = Image.fromarray(frame_np.copy())
         draw = ImageDraw.Draw(img)
 

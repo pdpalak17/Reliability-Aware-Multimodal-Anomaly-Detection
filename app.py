@@ -433,6 +433,11 @@ with tab1:
             'is_occluded':   face_occluded,
         }
 
+        if isinstance(frame_np, tuple):
+            frame_np = frame_np[0]
+        if frame_np is None or not isinstance(frame_np, np.ndarray):
+            frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
+
         # Run genuine neural network inference on the frame
         inference_result = engine.run_inference(
             frame_np=frame_np,
@@ -596,6 +601,11 @@ with tab2:
 
     with col_cam:
         st.markdown("#### 🔴 Grad-CAM Spatial Activation Heatmap Overlay")
+        if isinstance(frame_np, tuple):
+            frame_np = frame_np[0]
+        if frame_np is None or not isinstance(frame_np, np.ndarray):
+            frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
+
         gradcam_heatmap = xai_rag.generate_gradcam_heatmap(
             frame_shape=(frame_np.shape[0], frame_np.shape[1]),
             anomaly_type=calc_category
