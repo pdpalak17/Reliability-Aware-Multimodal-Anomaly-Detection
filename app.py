@@ -430,7 +430,8 @@ with tab1:
             override_person_count=override_count
         )
 
-        st.image(annotated_frame, caption=f"MediaPipe 33-Landmark Skeleton Overlay [Frame #{current_frame_idx}]", use_container_width=True)
+        # Explicit Trigger Button for Multimodal Anomaly Detection
+        run_detection = st.button("🔍 Run Multimodal Anomaly Detection & RAG Diagnosis", type="primary", use_container_width=True)
 
     with col_results:
         st.markdown("### 🚨 Threat Diagnosis & Intent Engine")
@@ -448,19 +449,23 @@ with tab1:
             calc_reliability = min(0.99, max(0.65, base_reliability + 0.04 * np.cos(current_frame_idx * 0.4)))
 
         # Dynamic inference calculations based on frame content & detected keypoints
+        is_masked_or_occluded = face_occluded
         if frame_np is not None:
             emotions_upper = [p['emotion'].upper() for p in persons_data if 'emotion' in p]
             actions_upper = [p.get('action', '').upper() for p in persons_data]
 
-            # Check for aggressive keypoints / pose actions
-            if any(a in ['AGGRESSIVE', 'FIGHTING', 'RUNNING'] for a in actions_upper) or any(e in ['ANGRY', 'DISGUST'] for e in emotions_upper):
-                calc_category = "Physical Fighting / Aggression"
-                calc_prob = min(0.98, max(0.75, base_prob + 0.85))
-                calc_reliability = min(0.98, max(0.70, base_reliability))
-                base_face_w, base_pose_w, base_video_w, base_context_w = 0.14, 0.36, 0.44, 0.06
+            if any('MASKED' in e or 'OCCLUD' in e for e in emotions_upper):
+                is_masked_or_occluded = True
+
+            # Check for aggressive keypoints / pose actions / ski masks / weapons
+            if is_masked_or_occluded or any(a in ['AGGRESSIVE', 'FIGHTING', 'RUNNING', 'WEAPON STANCE'] for a in actions_upper) or any(e in ['ANGRY', 'DISGUST', 'MASKED / THREAT'] for e in emotions_upper):
+                calc_category = "Physical Fighting / Aggression" if not (hour < 6 or hour > 22 or illumination < 0.3) else "Night-time Server Room Loitering"
+                calc_prob = min(0.98, max(0.88, base_prob + 0.85))
+                calc_reliability = min(0.98, max(0.72, base_reliability))
+                base_face_w, base_pose_w, base_video_w, base_context_w = 0.05, 0.52, 0.28, 0.15
             elif any(a in ['FALLING', 'CROUCHING'] for a in actions_upper) or any(e in ['FEAR', 'SAD'] for e in emotions_upper):
                 calc_category = "Sudden Fall / Collapse"
-                calc_prob = min(0.95, max(0.70, base_prob + 0.80))
+                calc_prob = min(0.95, max(0.75, base_prob + 0.80))
                 calc_reliability = min(0.95, max(0.65, base_reliability))
                 base_face_w, base_pose_w, base_video_w, base_context_w = 0.08, 0.54, 0.26, 0.12
             elif any(e in ['HAPPY', 'NEUTRAL'] for e in emotions_upper) and not any(a in ['AGGRESSIVE', 'FALLING'] for a in actions_upper):
@@ -470,7 +475,7 @@ with tab1:
                     calc_reliability = 0.96
                     base_face_w, base_pose_w, base_video_w, base_context_w = 0.46, 0.30, 0.14, 0.10
 
-        w_f = face_conf * base_face_w * (0.10 if face_occluded else 1.0)
+        w_f = face_conf * base_face_w * (0.10 if is_masked_or_occluded else 1.0)
         w_p = pose_conf * base_pose_w
         w_v = video_conf * base_video_w * (1.15 if uploaded_video_bytes is not None else 1.0)
         w_c = context_conf * base_context_w * (1.0 + (crowd_count / 100.0) + (abs(12 - hour) / 48.0))
@@ -527,7 +532,7 @@ with tab1:
             st.markdown(f"""
             <div class="soc-card" style="border-left: 4px solid #F87171;">
                 <span class="soc-badge-alert">⚠️ ANOMALY DETECTED: {calc_category.upper()}</span>
-                <div class="soc-metric-value text-rose">{prob_pct}% Risk Probability</div>
+                <div class="soc-metric-value text-rose">{prob_pct}% Anomaly Risk Probability</div>
                 <div style="font-size: 0.88rem;"><b>Fusion Reliability Index:</b> <span class="text-cyan">{rel_pct}%</span></div>
             </div>
             """, unsafe_allow_html=True)
@@ -537,8 +542,16 @@ with tab1:
             st.write(f"**{mod.capitalize()} Modality Weight:** `{weight*100:.1f}%`")
             st.progress(float(weight))
 
-        st.markdown("#### 🤖 Grounded RAG Alert Explanation")
-        rag_alert = xai_rag.generate_rag_alert(fusion_res, metadata={'zone': f'Zone-{zone_id}', 'hour': hour})
+        st.markdown("#### 🤖 Grounded RAG Alert & Diagnostic Rationale")
+        rag_alert = xai_rag.generate_rag_alert(
+            fusion_res,
+            metadata={
+                'zone': f'Zone-{zone_id}',
+                'hour': hour,
+                'is_occluded': is_masked_or_occluded,
+                'action': persons_data[0].get('action', 'Standing') if persons_data else 'Standing'
+            }
+        )
         st.info(rag_alert['alert_text'])
 
     st.markdown("---")
