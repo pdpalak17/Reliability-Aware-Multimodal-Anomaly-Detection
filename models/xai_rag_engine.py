@@ -130,10 +130,10 @@ class XAIRAGEngine:
         zone = metadata.get('zone', 'Zone-2 (Main Hallway)') if metadata else 'Zone-2'
         precedent = self.retrieve_incident_precedent(category, attn, zone)
 
-        if category == "Normal":
+        if "normal" in category.lower():
             alert_text = (
                 f"**[NORMAL MONITORING STATUS]**\n"
-                f"All modalities indicate routine activity. Confidence: {int((1-prob)*100)}%, Reliability: {int(reliability*100)}%.\n"
+                f"All modalities indicate routine pedestrian activity. Anomaly Risk: {int(prob*100)}%, System Reliability: {int(reliability*100)}%.\n"
                 f"Primary Modality Checked: {dominant_modality} ({dom_weight_pct}% weight allocation)."
             )
         else:
@@ -144,9 +144,9 @@ class XAIRAGEngine:
                 f"- **Primary Modality Driver:** {dominant_modality} (Attention Weight: {dom_weight_pct}%)\n"
                 f"- **Modality Weight Breakdown:** " + ", ".join([f"{k}: {int(v*100)}%" for k, v in attn.items()]) + "\n\n"
                 f"**RAG Incident Precedent Match:**\n"
-                f"Matched Past Case `{precedent['id']}` in {precedent['zone']}.\n"
-                f"**Historical Precedent Note:** \"{precedent['description']}\"\n"
-                f"**Recommended Action:** {precedent['recommended_action']}"
+                f"Matched Past Case `{precedent.get('id', 'INC-101')}` in {precedent.get('zone', 'Zone-2')}.\n"
+                f"**Historical Precedent Note:** \"{precedent.get('description', '')}\"\n"
+                f"**Recommended Action:** {precedent.get('recommended_action', '')}"
             )
 
         return {

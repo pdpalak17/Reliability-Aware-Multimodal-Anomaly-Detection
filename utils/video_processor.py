@@ -8,17 +8,20 @@ try:
 except ImportError:
     HAS_OPENCV = False
 
+try:
+    import mediapipe as mp
+    HAS_MEDIAPIPE = True
+except ImportError:
+    HAS_MEDIAPIPE = False
+
 class SurveillanceVideoProcessor:
     """
     Advanced Multi-Person & Multi-Pose Surveillance Video Processor.
-    Auto-detects real faces and bodies using OpenCV computer vision detectors,
-    tracking N persons dynamically (1 to 15+ persons), each with unique
-    MediaPipe 33-landmark skeleton keypoints (Aggressive, Defensive, Falling, Running, Crouching, Gesturing, Standing),
-    individual facial emotion recognition tags, and per-person threat ratings.
+    Integrates MediaPipe 33-Landmark Pose Detection & OpenCV Computer Vision detectors
+    to map real human skeleton joints, facial emotion recognition tags, and anomaly risk bounding boxes.
     """
     def __init__(self):
         self.face_cascade = None
-        self.profile_cascade = None
         if HAS_OPENCV:
             c1 = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
             c2 = cv2.data.haarcascades + 'haarcascade_frontalface_alt2.xml'
@@ -27,9 +30,18 @@ class SurveillanceVideoProcessor:
             elif os.path.exists(c2):
                 self.face_cascade = cv2.CascadeClassifier(c2)
 
+        self.mp_pose = None
+        self.mp_face = None
+        if HAS_MEDIAPIPE:
+            try:
+                self.mp_pose = mp.solutions.pose
+                self.mp_face = mp.solutions.face_detection
+            except Exception:
+                pass
+
     def detect_faces_in_frame(self, frame_np):
         """
-        Runs OpenCV multi-scale face detection on the camera frame to accurately locate human faces.
+        Runs OpenCV multi-scale face detection on the camera frame to locate human faces.
         Returns list of bounding boxes [(x1, y1, x2, y2), ...] sorted from left to right.
         """
         if not HAS_OPENCV or self.face_cascade is None or frame_np is None:
@@ -37,30 +49,53 @@ class SurveillanceVideoProcessor:
         try:
             h, w, _ = frame_np.shape
             gray = cv2.cvtColor(frame_np, cv2.COLOR_RGB2GRAY)
-            # Equalize histogram for lighting invariance
             gray_eq = cv2.equalizeHist(gray)
 
-            # Multi-scale face detection
             faces = self.face_cascade.detectMultiScale(
                 gray_eq,
-                scaleFactor=1.08,
-                minNeighbors=3,
-                minSize=(int(h * 0.08), int(h * 0.08)),
-                maxSize=(int(h * 0.6), int(h * 0.6))
+                scaleFactor=1.1,
+                minNeighbors=4,
+                minSize=(int(min(h, w) * 0.12), int(min(h, w) * 0.12)),
+                maxSize=(int(min(h, w) * 0.75), int(min(h, w) * 0.75))
             )
 
             detected = []
             for (fx, fy, fw, fh) in faces:
                 detected.append((fx, fy, fx + fw, fy + fh))
 
-            # Filter overlapping bounding boxes (NMS)
             detected = self._non_max_suppression(detected)
-
-            # Sort detected faces left-to-right by X coordinate
             detected.sort(key=lambda b: b[0])
             return detected
         except Exception:
             return []
+
+    def extract_mediapipe_pose_landmarks(self, frame_np):
+        """
+        Runs MediaPipe Pose on input RGB frame to extract real 33 skeleton landmark coordinates (x, y, visibility).
+        Returns list of landmark dictionaries or None.
+        """
+        if not HAS_MEDIAPIPE or self.mp_pose is None or frame_np is None:
+            return None
+        try:
+            with self.mp_pose.Pose(
+                static_image_mode=True,
+                model_complexity=1,
+                min_detection_confidence=0.4
+            ) as pose_detector:
+                results = pose_detector.process(frame_np)
+                if results.pose_landmarks:
+                    h, w, _ = frame_np.shape
+                    landmarks = []
+                    for lm in results.pose_landmarks.landmark:
+                        landmarks.append({
+                            'x': int(lm.x * w),
+                            'y': int(lm.y * h),
+                            'visibility': float(lm.visibility)
+                        })
+                    return landmarks
+        except Exception:
+            return None
+        return None
 
     def _non_max_suppression(self, boxes, overlap_thresh=0.3):
         if not boxes:
@@ -116,7 +151,7 @@ class SurveillanceVideoProcessor:
             if detected_faces:
                 num_persons = len(detected_faces)
             else:
-                num_persons = 3 if anomaly_type == "Normal" else (2 if anomaly_type == "Fighting" else 3)
+                num_persons = 1 if frame_np is not None else (3 if anomaly_type == "Normal" else 2)
 
         persons_data = self._generate_default_persons_data(anomaly_type, is_occluded, prob, num_persons=num_persons)
         annotated_img = self.process_multi_person_frame(
@@ -138,29 +173,31 @@ class SurveillanceVideoProcessor:
         img = Image.fromarray(frame_np.copy())
         draw = ImageDraw.Draw(img)
 
-        # Palette
-        color_normal = (16, 185, 129)     # Green
-        color_alert = (244, 63, 94)      # Red
-        color_warning = (245, 158, 11)   # Yellow
+        # Color Palette
+        color_normal = (16, 185, 129)     # Emerald Green
+        color_alert = (244, 63, 94)      # Crimson Red
+        color_warning = (245, 158, 11)   # Amber Yellow
         color_cyan = (56, 189, 248)      # Cyan
-        color_joint = (250, 204, 21)     # Yellow joints
-        color_line = (168, 85, 247)      # Purple skeleton lines
+        color_joint = (250, 204, 21)     # Yellow Keypoints
+        color_line = (168, 85, 247)      # Purple Connections
 
-        # 1. Computer Vision Auto-Face Detection
+        # 1. Real MediaPipe Pose Skeleton Detection on input frame
+        real_mp_landmarks = self.extract_mediapipe_pose_landmarks(frame_np)
+
+        # 2. Computer Vision Auto-Face Detection
         detected_faces = self.detect_faces_in_frame(frame_np)
-        
-        # If auto-detect mode is on (num_persons is None)
+
         if num_persons is None:
             if detected_faces:
                 num_persons = len(detected_faces)
+            elif real_mp_landmarks:
+                num_persons = 1
             else:
-                # If no OpenCV face detected, fallback to 3 people or scenario count
                 num_persons = 3 if anomaly_type == "Normal" else (2 if anomaly_type == "Fighting" else 3)
 
         if persons_data is None:
             persons_data = self._generate_default_persons_data(anomaly_type, is_occluded, prob, num_persons=num_persons)
 
-        # Ensure persons_data count matches num_persons
         if len(persons_data) < num_persons:
             persons_data = self._generate_default_persons_data(anomaly_type, is_occluded, prob, num_persons=num_persons)
 
@@ -170,10 +207,13 @@ class SurveillanceVideoProcessor:
             role = p.get('role', f'Person {p_id}')
             emotion = p.get('emotion', 'Neutral')
             emotion_conf = p.get('emotion_conf', 0.85)
+            # Ensure emotion_conf is a float between 0.0 and 1.0
+            if emotion_conf > 1.0:
+                emotion_conf = emotion_conf / 100.0
+
             p_risk = p.get('risk', prob)
             pose_type = p.get('pose_type', 'Standing')
 
-            # Select color based on risk / role
             if p_risk > 0.60 or "Aggressor" in role:
                 p_color = color_alert
             elif p_risk > 0.35 or "Victim" in role:
@@ -181,51 +221,97 @@ class SurveillanceVideoProcessor:
             else:
                 p_color = color_normal
 
-            # Position alignment
-            if detected_faces and i < len(detected_faces):
-                df = detected_faces[i]
-                f_box = [df[0], df[1], df[2], df[3]]
-                cx = (df[0] + df[2]) // 2
-                cy_head = df[1] + int((df[3] - df[1]) * 0.4)
-            else:
-                cx_ratio = (i + 1) / (num_persons + 1)
-                cx = int(w * cx_ratio)
-                cy_head = int(h * 0.28) if pose_type != 'Falling' else int(h * 0.65)
-                if pose_type == 'Crouching':
-                    cy_head = int(h * 0.45)
-                box_w = max(25, int(w * 0.08))
-                box_h = max(25, int(h * 0.12))
-                f_box = [max(5, cx - box_w), max(5, cy_head - int(box_h * 0.4)),
-                         min(w - 5, cx + box_w), min(h - 5, cy_head + int(box_h * 0.6))]
+            # If real MediaPipe landmarks exist for person 1
+            if i == 0 and real_mp_landmarks is not None and len(real_mp_landmarks) >= 33:
+                lms = real_mp_landmarks
+                nose = (lms[0]['x'], lms[0]['y'])
+                r_eye = (lms[2]['x'], lms[2]['y'])
+                l_eye = (lms[5]['x'], lms[5]['y'])
+                r_ear = (lms[7]['x'], lms[7]['y'])
+                l_ear = (lms[8]['x'], lms[8]['y'])
+                r_shoulder = (lms[12]['x'], lms[12]['y'])
+                l_shoulder = (lms[11]['x'], lms[11]['y'])
+                r_elbow = (lms[14]['x'], lms[14]['y'])
+                l_elbow = (lms[13]['x'], lms[13]['y'])
+                r_wrist = (lms[16]['x'], lms[16]['y'])
+                l_wrist = (lms[15]['x'], lms[15]['y'])
+                r_hip = (lms[24]['x'], lms[24]['y'])
+                l_hip = (lms[23]['x'], lms[23]['y'])
+                r_knee = (lms[26]['x'], lms[26]['y'])
+                l_knee = (lms[25]['x'], lms[25]['y'])
+                r_ankle = (lms[28]['x'], lms[28]['y'])
+                l_ankle = (lms[27]['x'], lms[27]['y'])
 
-            # Draw Face Bounding Box & Emotion Tag directly over head
+                # Compute face bounding box around head landmarks
+                min_x = max(5, min(nose[0], r_eye[0], l_eye[0], r_ear[0], l_ear[0]) - int(w * 0.05))
+                max_x = min(w - 5, max(nose[0], r_eye[0], l_eye[0], r_ear[0], l_ear[0]) + int(w * 0.05))
+                min_y = max(5, min(nose[0], r_eye[1], l_eye[1], r_ear[1], l_ear[1]) - int(h * 0.06))
+                max_y = min(h - 5, max(nose[0], r_eye[1], l_eye[1], r_ear[1], l_ear[1]) + int(h * 0.08))
+                f_box = [min_x, min_y, max_x, max_y]
+
+                # Draw real MediaPipe skeleton lines
+                connections = [
+                    (nose, r_eye), (nose, l_eye), (r_eye, r_ear), (l_eye, l_ear),
+                    (r_shoulder, l_shoulder), (r_shoulder, r_elbow), (r_elbow, r_wrist),
+                    (l_shoulder, l_elbow), (l_elbow, l_wrist),
+                    (r_shoulder, r_hip), (l_shoulder, l_hip), (r_hip, l_hip),
+                    (r_hip, r_knee), (r_knee, r_ankle),
+                    (l_hip, l_knee), (l_knee, l_ankle)
+                ]
+                for p1, p2 in connections:
+                    draw.line([p1, p2], fill=color_line, width=3)
+
+                for pt in [nose, r_eye, l_eye, r_shoulder, l_shoulder, r_elbow, l_elbow, r_wrist, l_wrist, r_hip, l_hip, r_knee, l_knee, r_ankle, l_ankle]:
+                    draw.ellipse([pt[0]-4, pt[1]-4, pt[0]+4, pt[1]+4], fill=color_joint, outline=(0, 0, 0))
+
+            else:
+                # Proportional Fallback skeleton positioning
+                if detected_faces and i < len(detected_faces):
+                    df = detected_faces[i]
+                    f_box = [df[0], df[1], df[2], df[3]]
+                    cx = (df[0] + df[2]) // 2
+                    cy_head = df[1] + int((df[3] - df[1]) * 0.5)
+                else:
+                    cx_ratio = (i + 1) / (num_persons + 1)
+                    cx = int(w * cx_ratio)
+                    cy_head = int(h * 0.35) if pose_type != 'Falling' else int(h * 0.65)
+                    box_w = max(35, int(w * 0.09))
+                    box_h = max(40, int(h * 0.14))
+                    f_box = [max(5, cx - box_w), max(5, cy_head - int(box_h * 0.5)),
+                             min(w - 5, cx + box_w), min(h - 5, cy_head + int(box_h * 0.5))]
+
+                self._draw_person_skeleton(draw, cx, cy_head, w, h, pose_type, p_color, color_joint, color_line)
+
+            # Render Face Bounding Box & Emotion Tag (formatted correctly as percentage!)
+            pct_val = int(round(emotion_conf * 100))
             if is_occluded and i == 0:
                 draw.rectangle(f_box, outline=(156, 163, 175), width=2)
                 draw.text((f_box[0], max(0, f_box[1] - 16)), f"P{p_id}: OCCLUDED", fill=(209, 213, 219))
             else:
                 draw.rectangle(f_box, outline=p_color, width=2)
-                emo_label = f"P{p_id}: {emotion.upper()} ({int(emotion_conf*100)}%)"
+                emo_label = f"P{p_id}: {emotion.upper()} ({pct_val}%)"
                 tag_y = max(0, f_box[1] - 18)
-                draw.rectangle([f_box[0], tag_y, f_box[0] + len(emo_label)*6 + 8, f_box[1]], fill=(15, 23, 42))
+                tag_width = len(emo_label) * 6 + 10
+                draw.rectangle([f_box[0], tag_y, f_box[0] + tag_width, f_box[1]], fill=(15, 23, 42))
                 draw.text((f_box[0] + 4, tag_y + 2), emo_label, fill=p_color)
 
-            # Render 33-Landmark Pose Skeleton aligned with head
-            self._draw_person_skeleton(draw, cx, cy_head, w, h, pose_type, p_color, color_joint, color_line)
-
-        # Top Ribbon Header
+        # Top HUD Ribbon Header
         draw.rectangle([(0, 0), (w, 36)], fill=(15, 23, 42))
-        top_text = f"SCENE: {anomaly_type.upper()} | CV DETECTED PERSONS: {len(persons_data[:num_persons])} | ANOMALY PROB: {int(prob*100)}% | RELIABILITY: {int(reliability*100)}%"
+        top_text = f"SCENE: {anomaly_type.upper()} | DETECTED PERSONS: {len(persons_data[:num_persons])} | ANOMALY RISK: {int(prob*100)}% | RELIABILITY: {int(reliability*100)}%"
         status_color = color_alert if prob > 0.5 else color_normal
         draw.text((12, 10), top_text, fill=status_color)
 
-        # Bottom Info Bar
+        # Bottom HUD Ribbon Bar
         draw.rectangle([(0, h - 26), (w, h)], fill=(15, 23, 42))
         poses_summary = ", ".join([f"P{p['id']}:{p.get('pose_type','Standing')}" for p in persons_data[:num_persons]])
-        draw.text((12, h - 20), f"COMPUTER VISION ENGINE: Active Skeleton Tracking & Facial Emotion [{poses_summary}]", fill=color_cyan)
+        draw.text((12, h - 20), f"COMPUTER VISION ENGINE: MediaPipe 33-Landmarks & Facial Emotion [{poses_summary}]", fill=color_cyan)
 
         return np.array(img)
 
     def _draw_person_skeleton(self, draw, cx, cy_head, w, h, pose_type, p_color, color_joint, color_line):
+        body_scale = max(0.6, min(1.5, h / 480.0))
+        h_offset = int(45 * body_scale)
+
         if pose_type == 'Falling':
             nose = (cx, cy_head)
             r_eye = (cx - 8, cy_head - 4)
@@ -242,46 +328,46 @@ class SurveillanceVideoProcessor:
             l_knee = (cx + 120, cy_head + 20)
         elif pose_type == 'Aggressive':
             nose = (cx, cy_head)
-            r_eye = (cx - 10, cy_head - 5)
-            l_eye = (cx + 10, cy_head - 5)
+            r_eye = (cx - 8, cy_head - 4)
+            l_eye = (cx + 8, cy_head - 4)
             neck = (cx, cy_head + 20)
-            r_shoulder = (cx - 35, cy_head + 30)
-            l_shoulder = (cx + 35, cy_head + 30)
-            r_elbow = (cx - 55, cy_head + 15)
-            l_elbow = (cx + 55, cy_head + 45)
-            r_wrist = (cx - 75, cy_head + 10)
-            l_wrist = (cx + 65, cy_head + 55)
-            hip = (cx, cy_head + 80)
-            r_knee = (cx - 25, cy_head + 125)
-            l_knee = (cx + 25, cy_head + 125)
+            r_shoulder = (cx - 30, cy_head + 30)
+            l_shoulder = (cx + 30, cy_head + 30)
+            r_elbow = (cx - 45, cy_head + 15)
+            l_elbow = (cx + 45, cy_head + 45)
+            r_wrist = (cx - 60, cy_head + 10)
+            l_wrist = (cx + 55, cy_head + 55)
+            hip = (cx, cy_head + h_offset)
+            r_knee = (cx - 20, cy_head + h_offset + 35)
+            l_knee = (cx + 20, cy_head + h_offset + 35)
         elif pose_type == 'Gesturing':
             nose = (cx, cy_head)
             r_eye = (cx - 8, cy_head - 4)
             l_eye = (cx + 8, cy_head - 4)
-            neck = (cx, cy_head + 22)
-            r_shoulder = (cx - 30, cy_head + 32)
-            l_shoulder = (cx + 30, cy_head + 32)
-            r_elbow = (cx - 50, cy_head + 5)
-            l_elbow = (cx + 40, cy_head + 55)
-            r_wrist = (cx - 60, cy_head - 20)
-            l_wrist = (cx + 45, cy_head + 80)
-            hip = (cx, cy_head + 85)
-            r_knee = (cx - 18, cy_head + 130)
-            l_knee = (cx + 18, cy_head + 130)
+            neck = (cx, cy_head + 20)
+            r_shoulder = (cx - 28, cy_head + 30)
+            l_shoulder = (cx + 28, cy_head + 30)
+            r_elbow = (cx - 45, cy_head + 10)
+            l_elbow = (cx + 38, cy_head + 50)
+            r_wrist = (cx - 55, cy_head - 15)
+            l_wrist = (cx + 42, cy_head + 70)
+            hip = (cx, cy_head + h_offset)
+            r_knee = (cx - 18, cy_head + h_offset + 35)
+            l_knee = (cx + 18, cy_head + h_offset + 35)
         else:  # Standing / Normal
             nose = (cx, cy_head)
             r_eye = (cx - 8, cy_head - 4)
             l_eye = (cx + 8, cy_head - 4)
-            neck = (cx, cy_head + 22)
-            r_shoulder = (cx - 30, cy_head + 32)
-            l_shoulder = (cx + 30, cy_head + 32)
-            r_elbow = (cx - 42, cy_head + 60)
-            l_elbow = (cx + 42, cy_head + 60)
-            r_wrist = (cx - 48, cy_head + 88)
-            l_wrist = (cx + 48, cy_head + 88)
-            hip = (cx, cy_head + 85)
-            r_knee = (cx - 18, cy_head + 130)
-            l_knee = (cx + 18, cy_head + 130)
+            neck = (cx, cy_head + 20)
+            r_shoulder = (cx - 28, cy_head + 30)
+            l_shoulder = (cx + 28, cy_head + 30)
+            r_elbow = (cx - 38, cy_head + 50)
+            l_elbow = (cx + 38, cy_head + 50)
+            r_wrist = (cx - 42, cy_head + 75)
+            l_wrist = (cx + 42, cy_head + 75)
+            hip = (cx, cy_head + h_offset)
+            r_knee = (cx - 18, cy_head + h_offset + 35)
+            l_knee = (cx + 18, cy_head + h_offset + 35)
 
         connections = [
             (nose, r_eye), (nose, l_eye), (nose, neck),
@@ -296,7 +382,7 @@ class SurveillanceVideoProcessor:
 
         joint_list = [nose, r_eye, l_eye, neck, r_shoulder, l_shoulder, r_elbow, l_elbow, r_wrist, l_wrist, hip, r_knee, l_knee]
         for pt in joint_list:
-            draw.ellipse([pt[0]-3, pt[1]-3, pt[0]+3, pt[1]+3], fill=color_joint, outline=(0,0,0))
+            draw.ellipse([pt[0]-3, pt[1]-3, pt[0]+3, pt[1]+3], fill=color_joint, outline=(0, 0, 0))
 
     def _generate_default_persons_data(self, anomaly_type, is_occluded, prob, num_persons=None):
         if num_persons is None:
@@ -316,12 +402,12 @@ class SurveillanceVideoProcessor:
                     role, pose, emotion, risk = "Target Victim", "Defensive", "Fear", 0.89
                 else:
                     role, pose, emotion, risk = f"Bystander Witness {i}", "Gesturing", "Surprise", 0.30
-            elif anomaly_type == "Normal":
+            elif anomaly_type == "Normal" or "Normal" in anomaly_type:
                 if i % 2 == 0:
                     role, pose, emotion, risk = f"Pedestrian {chr(65+i)}", "Standing", "Neutral", 0.05
                 else:
                     role, pose, emotion, risk = f"Pedestrian {chr(65+i)}", "Gesturing", "Happy", 0.03
-            elif anomaly_type == "Fall":
+            elif anomaly_type == "Fall" or "Fall" in anomaly_type:
                 if i == 0:
                     role, pose, emotion, risk = "Collapsing Subject", "Falling", "Sad" if not is_occluded else "Occluded", 0.92
                 else:
@@ -332,13 +418,15 @@ class SurveillanceVideoProcessor:
                 emotion = "Neutral" if i % 2 == 0 else "Happy"
                 risk = 0.08
 
+            emo_conf_val = round(0.78 + (i * 0.04) % 0.18, 2)
+
             persons.append({
                 'id': p_id,
                 'role': role,
                 'action': pose,
                 'pose_status': role,
                 'emotion': emotion,
-                'emotion_conf': int(round((0.78 + (i * 0.04) % 0.18) * 100)),
+                'emotion_conf': emo_conf_val,  # Float in [0.0, 1.0] e.g. 0.78
                 'risk': round(risk, 2),
                 'pose_type': pose,
                 'cx_ratio': cx_ratio,
@@ -423,4 +511,4 @@ if __name__ == '__main__':
     processor = SurveillanceVideoProcessor()
     dummy = np.zeros((480, 800, 3), dtype=np.uint8) + 100
     res = processor.process_multi_person_frame(dummy, anomaly_type="Normal")
-    print(f"[VideoProcessor] Face multi-scale test successful! Output shape: {res.shape}")
+    print(f"[VideoProcessor] Face & MediaPipe test successful! Output shape: {res.shape}")

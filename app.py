@@ -452,7 +452,7 @@ with tab1:
             <div class="glass-card">
                 <h4 style="margin: 0; color: #F8FAFC;">👤 Person {person['id']}</h4>
                 <p style="margin: 4px 0;"><b>Action:</b> <span class="text-cyan">{person['action']}</span></p>
-                <p style="margin: 4px 0;"><b>Emotion:</b> <span class="text-amber">{person['emotion']} ({person['emotion_conf']}%)</span></p>
+                <p style="margin: 4px 0;"><b>Emotion:</b> <span class="text-amber">{person['emotion']} ({int(round(person['emotion_conf']*100 if person['emotion_conf'] <= 1.0 else person['emotion_conf']))}%)</span></p>
                 <p style="margin: 4px 0;"><b>Pose Status:</b> {person['pose_status']}</p>
             </div>
             """, unsafe_allow_html=True)
