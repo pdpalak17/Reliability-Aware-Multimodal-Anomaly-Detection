@@ -23,6 +23,7 @@ from models.video_branch import VideoTemporalCNNLSTM
 from models.context_branch import ContextMetadataNetwork
 from models.attention_fusion import ContextAwareAttentionFusion
 from models.xai_rag_engine import XAIRAGEngine
+from models.inference_engine import MultimodalInferenceEngine
 import utils.video_processor
 from utils.video_processor import SurveillanceVideoProcessor
 from utils.xai_visualizer import XAIVisualizer
@@ -237,20 +238,12 @@ monitor = st.session_state.monitor
 
 @st.cache_resource
 def load_models():
-    face_net = FacialExpressionCNN()
-    pose_net = BodyPoseNetwork()
-    video_net = VideoTemporalCNNLSTM()
-    context_net = ContextMetadataNetwork()
-    fusion_net = ContextAwareAttentionFusion()
+    engine = MultimodalInferenceEngine()
     xai_rag = XAIRAGEngine()
+    ckpts = engine.checkpoints_loaded()
+    return engine, xai_rag, ckpts
 
-    if os.path.exists("saved_models/fusion_model_weights.npz"):
-        w = np.load("saved_models/fusion_model_weights.npz")
-        fusion_net.set_weights(w['W_attn'], w['b_attn'], w['W_cls'], w['b_cls'])
-
-    return face_net, pose_net, video_net, context_net, fusion_net, xai_rag
-
-face_net, pose_net, video_net, context_net, fusion_net, xai_rag = load_models()
+engine, xai_rag, _ckpts_loaded = load_models()
 processor = SurveillanceVideoProcessor()
 
 # Bright Executive Hero Banner
@@ -319,29 +312,14 @@ if "Normal" in preset_scenario:
     base_face_w, base_pose_w, base_video_w, base_context_w = 0.42, 0.31, 0.15, 0.12
 elif "Fall" in preset_scenario:
     scenario_category = "Sudden Fall / Collapse"
-    base_prob = 0.92
-    base_reliability = 0.88 if not face_occluded else 0.72
-    base_face_w, base_pose_w, base_video_w, base_context_w = (0.06 if face_occluded else 0.18), 0.54, 0.28, 0.14
 elif "Fighting" in preset_scenario:
     scenario_category = "Physical Fighting / Aggression"
-    base_prob = 0.96
-    base_reliability = 0.94
-    base_face_w, base_pose_w, base_video_w, base_context_w = 0.15, 0.35, 0.45, 0.05
 elif "Loitering" in preset_scenario:
     scenario_category = "Night-time Server Room Loitering"
-    base_prob = 0.78
-    base_reliability = 0.84
-    base_face_w, base_pose_w, base_video_w, base_context_w = 0.10, 0.16, 0.26, 0.48
 elif "Panic" in preset_scenario:
     scenario_category = "Panic / Erratic Crowd Motion"
-    base_prob = 0.88
-    base_reliability = 0.91
-    base_face_w, base_pose_w, base_video_w, base_context_w = 0.10, 0.16, 0.52, 0.22
 else:  # Custom Input Feed
     scenario_category = "Normal Pedestrian Activity"
-    base_prob = 0.08
-    base_reliability = 0.92
-    base_face_w, base_pose_w, base_video_w, base_context_w = 0.38, 0.32, 0.18, 0.12
 
 # Main 5 Tabs Navigation
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -422,98 +400,108 @@ with tab1:
             else:
                 frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
 
+        # Build override hint for video processor overlay
         override_count = None if "Auto-Detect" in person_mode else int(person_mode.split()[0])
 
+        # Run visual overlay (MediaPipe pose + face detection for bounding boxes)
         annotated_frame, persons_data = processor.process_camera_frame_multi(
             frame_np,
-            anomaly_type=scenario_category,
+            anomaly_type="Normal Pedestrian Activity",  # overlay neutral until model runs
             is_occluded=face_occluded,
-            prob=base_prob,
-            reliability=base_reliability,
+            prob=0.05,
+            reliability=0.95,
             override_person_count=override_count
         )
 
-        st.image(annotated_frame, caption=f"MediaPipe 33-Landmark Skeleton Overlay [Frame #{current_frame_idx}]", use_container_width=True)
+        st.image(annotated_frame, caption=f"MediaPipe Computer Vision Overlay [Frame #{current_frame_idx}]", use_container_width=True)
 
-        # Explicit Trigger Button for Multimodal Anomaly Detection
+        # Explicit Trigger Button for Real Multimodal Anomaly Detection
         run_detection = st.button("🔍 Run Multimodal Anomaly Detection & RAG Diagnosis", type="primary", use_container_width=True)
 
     with col_results:
         st.markdown("### 🚨 Threat Diagnosis & Intent Engine")
 
-        calc_prob = base_prob
-        calc_reliability = base_reliability
-        calc_category = scenario_category
+        # ──────────────────────────────────────────────────────────────────────
+        # REAL MULTIMODAL INFERENCE — All four branch models + fusion network
+        # ──────────────────────────────────────────────────────────────────────
+        frame_meta = {
+            'zone_id':       zone_id,
+            'hour':          hour,
+            'illumination':  illumination,
+            'crowd_count':   crowd_count,
+            'baseline_norm': baseline_norm,
+            'is_occluded':   face_occluded,
+        }
 
-        if uploaded_video_bytes is not None:
-            frame_var = float(np.sin(current_frame_idx * 0.5))
-            if calc_category != "Normal Pedestrian Activity":
-                calc_prob = min(0.99, max(0.40, base_prob + 0.12 * frame_var))
-            else:
-                calc_prob = min(0.30, max(0.02, 0.05 + 0.08 * abs(frame_var)))
-            calc_reliability = min(0.99, max(0.65, base_reliability + 0.04 * np.cos(current_frame_idx * 0.4)))
+        # Run genuine neural network inference on the frame
+        inference_result = engine.run_inference(
+            frame_np=frame_np,
+            metadata=frame_meta,
+            verbose=False
+        )
 
-        # Dynamic inference calculations based on frame content & detected keypoints
+        # Apply temperature scaling to prevent extreme softmax saturation
+        # (maps 0.0/1.0 extremes to calibrated 0.05/0.95 range)
+        raw_prob = inference_result['anomaly_probability']
+        raw_reliability = inference_result['reliability_score']
+
+        # Temperature calibration: scale logits to produce calibrated probabilities
+        def calibrate(p, temp=2.5, min_p=0.03, max_p=0.97):
+            """Apply temperature scaling to prevent extreme probability saturation."""
+            if p <= 0.0: return min_p
+            if p >= 1.0: return max_p
+            logit = np.log(p / (1.0 - p + 1e-9))
+            cal_logit = logit / temp
+            cal_p = 1.0 / (1.0 + np.exp(-cal_logit))
+            return float(np.clip(cal_p, min_p, max_p))
+
+        calc_prob = calibrate(raw_prob)
+        calc_reliability = float(np.clip(raw_reliability, 0.55, 0.97))
+        calc_category = inference_result['predicted_category']
+        attn_weights = inference_result['attention_weights']
+
+        # Update visual overlay with real model predictions
+        annotated_frame_updated, persons_data = processor.process_camera_frame_multi(
+            frame_np,
+            anomaly_type=calc_category,
+            is_occluded=face_occluded,
+            prob=calc_prob,
+            reliability=calc_reliability,
+            override_person_count=override_count
+        )
+
+        # Update emotion data in persons_data from real face model output
+        if persons_data and inference_result.get('face_detected', False):
+            persons_data[0]['emotion'] = inference_result['face_emotion']
+            persons_data[0]['emotion_conf'] = float(inference_result['face_confidence'])
+            persons_data[0]['emotion_dict'] = inference_result['face_probs']
+
         is_masked_or_occluded = face_occluded
-        if frame_np is not None:
-            emotions_upper = [p['emotion'].upper() for p in persons_data if 'emotion' in p]
-            actions_upper = [p.get('action', '').upper() for p in persons_data]
-
-            if any('MASKED' in e or 'OCCLUD' in e for e in emotions_upper):
-                is_masked_or_occluded = True
-
-            # Check for aggressive keypoints / pose actions / ski masks / weapons / screaming facial expressions
-            if is_masked_or_occluded or any(a in ['AGGRESSIVE', 'FIGHTING', 'RUNNING', 'WEAPON STANCE', 'AGGRESSIVE / SCREAMING'] for a in actions_upper) or any('ANGRY' in e or 'DISGUST' in e or 'THREAT' in e or 'SCREAM' in e or 'MASKED' in e for e in emotions_upper):
-                calc_category = "Physical Fighting / Aggression" if not (hour < 6 or hour > 22 or illumination < 0.3) else "Night-time Server Room Loitering"
-                calc_prob = min(0.98, max(0.88, base_prob + 0.85))
-                calc_reliability = min(0.98, max(0.72, base_reliability))
-                base_face_w, base_pose_w, base_video_w, base_context_w = 0.15, 0.48, 0.25, 0.12
-            elif any(a in ['FALLING', 'CROUCHING'] for a in actions_upper) or any('FEAR' in e or 'SAD' in e for e in emotions_upper):
-                calc_category = "Sudden Fall / Collapse"
-                calc_prob = min(0.95, max(0.75, base_prob + 0.80))
-                calc_reliability = min(0.95, max(0.65, base_reliability))
-                base_face_w, base_pose_w, base_video_w, base_context_w = 0.08, 0.54, 0.26, 0.12
-            elif any('HAPPY' in e or 'NEUTRAL' in e for e in emotions_upper) and not any(a in ['AGGRESSIVE', 'FALLING'] for a in actions_upper):
-                if scenario_category == "Normal Pedestrian Activity":
-                    calc_category = "Normal Pedestrian Activity"
-                    calc_prob = min(0.25, max(0.02, 0.05 + 0.02 * (current_frame_idx % 3)))
-                    calc_reliability = 0.96
-                    base_face_w, base_pose_w, base_video_w, base_context_w = 0.46, 0.30, 0.14, 0.10
-
-        w_f = face_conf * base_face_w * (0.10 if is_masked_or_occluded else 1.0)
-        w_p = pose_conf * base_pose_w
-        w_v = video_conf * base_video_w * (1.15 if uploaded_video_bytes is not None else 1.0)
-        w_c = context_conf * base_context_w * (1.0 + (crowd_count / 100.0) + (abs(12 - hour) / 48.0))
-
-        if uploaded_video_bytes is not None:
-            w_v *= (0.85 + 0.3 * abs(np.sin(current_frame_idx * 0.3)))
-            w_p *= (0.85 + 0.3 * abs(np.cos(current_frame_idx * 0.3)))
-
-        sum_w = w_f + w_p + w_v + w_c
-        if sum_w > 0:
-            attn_weights = {
-                'face': round(w_f / sum_w, 3),
-                'pose': round(w_p / sum_w, 3),
-                'video': round(w_v / sum_w, 3),
-                'context': round(w_c / sum_w, 3)
-            }
-        else:
-            attn_weights = {'face': 0.25, 'pose': 0.25, 'video': 0.25, 'context': 0.25}
+        dominant_modality = max(attn_weights, key=attn_weights.get)
 
         fusion_res = {
             'predicted_category': calc_category,
             'anomaly_probability': float(calc_prob),
             'reliability_score': float(calc_reliability),
             'attention_weights': attn_weights,
-            'category_probs': {
-                calc_category: float(calc_prob),
-                'Normal Pedestrian Activity': float(1.0 - calc_prob) if calc_category != "Normal Pedestrian Activity" else float(calc_prob)
-            }
+            'category_probs': inference_result['category_probs'],
         }
 
         prob_pct = int(calc_prob * 100)
-        rel_pct = int(calc_reliability * 100)
-        dominant_modality = max(attn_weights, key=attn_weights.get)
+        rel_pct  = int(calc_reliability * 100)
+
+        # Model diagnostics (shown to user)
+        ckpt_status = inference_result['checkpoints_loaded']
+        all_ckpts_ok = all(ckpt_status.values())
+
+        if all_ckpts_ok:
+            st.success(f"Model: All 4 branch checkpoints loaded. Face={inference_result['face_emotion']} "
+                       f"({inference_result['face_confidence']*100:.0f}%), "
+                       f"Pose={inference_result['pose_class']}, "
+                       f"Video={inference_result['video_class']}, "
+                       f"Raw_P(Anomaly)={raw_prob:.3f}")
+        else:
+            st.warning(f"Checkpoint status: {ckpt_status}")
 
         logger.log_incident(
             anomaly_type=calc_category,
@@ -522,7 +510,7 @@ with tab1:
             dominant_modality=dominant_modality.capitalize(),
             zone=f"Zone-{zone_id}",
             frame_idx=current_frame_idx,
-            rag_explanation=f"Detected {calc_category} with {prob_pct}% risk and {rel_pct}% reliability."
+            rag_explanation=f"Genuine neural network inference: {calc_category} with {prob_pct}% risk and {rel_pct}% reliability."
         )
 
         if "normal" in calc_category.lower():
