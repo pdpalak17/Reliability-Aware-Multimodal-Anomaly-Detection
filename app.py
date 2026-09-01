@@ -1,5 +1,11 @@
 import os
 import sys
+
+# Ensure repository root is at position 0 in sys.path for Streamlit Cloud deployment
+ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 import time
 import numpy as np
 import pandas as pd
@@ -13,8 +19,6 @@ try:
     import cv2
 except ImportError:
     cv2 = None
-
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from data.dataset_loaders import load_all_datasets
 from models.face_branch import FacialExpressionCNN
