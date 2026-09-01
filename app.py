@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.graph_objects as go
 import plotly.express as px
 
@@ -13,7 +14,6 @@ try:
 except ImportError:
     cv2 = None
 
-# Add parent directory to path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from data.dataset_loaders import load_all_datasets
@@ -30,206 +30,48 @@ from utils.xai_visualizer import XAIVisualizer
 from utils.incident_logger import IncidentLogger
 from utils.system_monitor import SystemMonitor
 
+# ---------------------------------------------------------------------------
+# Read the EXACT index.html from project.zip extraction
+# ---------------------------------------------------------------------------
+INDEX_HTML_PATH = os.path.join(os.path.dirname(__file__), 'templates', 'index.html')
+if not os.path.exists(INDEX_HTML_PATH):
+    INDEX_HTML_PATH = os.path.join(os.path.dirname(__file__), 'scratch', 'project_extracted', 'index.html')
+
+if os.path.exists(INDEX_HTML_PATH):
+    with open(INDEX_HTML_PATH, 'r', encoding='utf-8') as f:
+        RAW_INDEX_HTML = f.read()
+else:
+    RAW_INDEX_HTML = ""
+
+# ---------------------------------------------------------------------------
 # Page Configuration
+# ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="SENTINEL-AI | Reliability-Aware Multimodal Anomaly Detection Platform",
-    page_icon="🛡️",
+    page_title="SENTINEL-AI / Multimodal Surveillance Monitor",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed" if st.session_state.get('page', 'home') == 'home' else "expanded"
 )
 
-# Off-White Warm SaaS Design System (Apple / Arc / Notion Aesthetic)
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+if 'page' not in st.session_state:
+    st.session_state.page = 'home'
 
-    /* Global Base & Off-White Background */
-    html, body, [data-testid="stAppViewContainer"], .stApp {
-        background-color: #F4F5F7 !important;
-        color: #1F2937 !important;
-        font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-    }
+# Check query params for navigation from iframe
+qp = st.query_params
+if qp.get("view") == "screening":
+    st.session_state.page = 'screening'
+elif qp.get("view") == "home":
+    st.session_state.page = 'home'
 
-    /* Universal Text Color Enforcements for High Contrast Readability */
-    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {
-        color: #111827 !important;
-        font-weight: 700 !important;
-    }
-    .stApp p, .stApp span, .stApp label, .stApp div, [data-testid="stMarkdownContainer"] p {
-        color: #1F2937 !important;
-    }
+def navigate_to(page_name):
+    st.session_state.page = page_name
+    st.query_params["view"] = page_name
+    st.rerun()
 
-    /* Hero Banner Container */
-    .hero-container {
-        background: linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%);
-        border: 1px solid #E2E8F0;
-        border-radius: 18px;
-        padding: 28px 24px;
-        margin-bottom: 24px;
-        box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.05);
-        position: relative;
-        overflow: hidden;
-    }
-    .hero-glow {
-        position: absolute;
-        top: -60px;
-        right: -60px;
-        width: 280px;
-        height: 280px;
-        background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
-        pointer-events: none;
-    }
-    .hero-title {
-        font-size: 2.3rem;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        color: #0F172A !important;
-        margin-bottom: 8px;
-    }
-    .hero-subtitle {
-        font-size: 1.02rem;
-        color: #475569 !important;
-        font-weight: 500;
-        max-width: 850px;
-    }
-
-    /* Live Operational Pulse Dot */
-    .pulse-dot {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background-color: #22C55E;
-        box-shadow: 0 0 12px #22C55E;
-        animation: pulse-ring 2s infinite;
-        margin-right: 6px;
-        vertical-align: middle;
-    }
-    @keyframes pulse-ring {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-    }
-
-    /* Premium Off-White Card */
-    .saas-card {
-        background: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 16px !important;
-        padding: 22px !important;
-        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04) !important;
-        margin-bottom: 20px !important;
-        transition: all 0.2s ease !important;
-    }
-    .saas-card:hover {
-        border-color: #3B82F6 !important;
-        box-shadow: 0 10px 25px -4px rgba(59, 130, 246, 0.12) !important;
-    }
-
-    /* Bright Badges */
-    .badge-normal {
-        background: #DCFCE7 !important;
-        color: #15803D !important;
-        border: 1px solid #86EFAC !important;
-        padding: 5px 14px;
-        border-radius: 20px;
-        font-size: 0.78rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        display: inline-block;
-    }
-    .badge-alert {
-        background: #FEE2E2 !important;
-        color: #B91C1C !important;
-        border: 1px solid #FCA5A5 !important;
-        padding: 5px 14px;
-        border-radius: 20px;
-        font-size: 0.78rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        display: inline-block;
-    }
-    .badge-info {
-        background: #DBEAFE !important;
-        color: #1D4ED8 !important;
-        border: 1px solid #93C5FD !important;
-        padding: 5px 14px;
-        border-radius: 20px;
-        font-size: 0.78rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        display: inline-block;
-    }
-
-    /* Metric Values & Typography */
-    .metric-value {
-        font-size: 2.4rem;
-        font-weight: 800;
-        letter-spacing: -0.04em;
-        line-height: 1.1;
-        margin: 8px 0;
-    }
-    .metric-label {
-        font-size: 0.82rem;
-        color: #64748B !important;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-    }
-    .text-emerald { color: #16A34A !important; }
-    .text-rose { color: #DC2626 !important; }
-    .text-amber { color: #D97706 !important; }
-    .text-blue { color: #2563EB !important; }
-
-    /* Modern Tabs Bar */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 6px;
-        background: #FFFFFF !important;
-        padding: 6px;
-        border-radius: 14px;
-        border: 1px solid #E2E8F0 !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 42px;
-        padding: 0 20px;
-        border-radius: 10px;
-        color: #475569 !important;
-        font-weight: 600;
-        font-size: 0.88rem;
-    }
-    .stTabs [aria-selected="true"] {
-        background: #3B82F6 !important;
-        color: #FFFFFF !important;
-        box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
-    }
-
-    /* Custom Sidebar Styling */
-    section[data-testid="stSidebar"] {
-        background-color: #F8FAFC !important;
-        border-right: 1px solid #E2E8F0 !important;
-    }
-    section[data-testid="stSidebar"] * {
-        color: #1F2937 !important;
-    }
-    section[data-testid="stSidebar"] .stMarkdown h2, 
-    section[data-testid="stSidebar"] .stMarkdown h3 {
-        color: #334155 !important;
-        font-size: 0.82rem !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.08em !important;
-        margin-top: 18px !important;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Initialize Session State Singletons
+# ---------------------------------------------------------------------------
+# Initialize session singletons & load models
+# ---------------------------------------------------------------------------
 if 'logger' not in st.session_state:
     st.session_state.logger = IncidentLogger()
-
 if 'monitor' not in st.session_state:
     st.session_state.monitor = SystemMonitor()
 
@@ -246,508 +88,553 @@ def load_models():
 engine, xai_rag, _ckpts_loaded = load_models()
 processor = SurveillanceVideoProcessor()
 
-# Bright Executive Hero Banner
-st.markdown("""
-<div class="hero-container">
-    <div class="hero-glow"></div>
-    <div class="hero-title">🛡️ SENTINEL-AI | Multimodal Surveillance Platform</div>
-    <div class="hero-subtitle">
-        <span class="pulse-dot"></span> <b>SYSTEM OPERATIONAL</b> &nbsp;|&nbsp; 
-        Reliability-Aware Contextual Multimodal Anomaly Detection & RAG Diagnosis &nbsp;|&nbsp; 
-        <i>Woxsen University Research Project</i>
-    </div>
-</div>
-""", unsafe_allow_html=True)
 
-# Sidebar Operational Control Panel
-st.sidebar.header("🕹️ Operational Controls")
+# =============================================================================
+# PAGE 1: EXACT LANDING PAGE — rendered via components.html for full CSS fidelity
+# =============================================================================
+if st.session_state.page == 'home':
 
-preset_scenario = st.sidebar.selectbox(
-    "Surveillance Scenario Preset",
-    [
-        "1. Normal Pedestrian Activity",
-        "2. Sudden Fall / Collapse",
-        "3. Physical Fighting / Aggression",
-        "4. Night-time Server Room Loitering",
-        "5. Panic / Erratic Crowd Motion",
-        "6. Custom Input Feed"
-    ]
-)
+    # Hide ALL Streamlit chrome on the landing page except our nav button
+    st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+        [data-testid="stHeader"] { display: none !important; }
+        [data-testid="stSidebar"] { display: none !important; }
+        html, body, [data-testid="stAppViewContainer"], .stApp {
+            background-color: #f4f2eb !important;
+        }
+        .block-container {
+            padding: 0 !important;
+            max-width: 100% !important;
+        }
+        [data-testid="stBottomBlockContainer"] { display: none !important; }
+        footer { display: none !important; }
+        #MainMenu { display: none !important; }
+        .stButton > button[kind="primary"] {
+            background-color: #c43a1a !important;
+            color: #fff !important;
+            border: none !important;
+            border-radius: 0 !important;
+            font-family: 'IBM Plex Mono', monospace !important;
+            font-weight: 600 !important;
+            font-size: 11px !important;
+            letter-spacing: .06em !important;
+            text-transform: uppercase !important;
+            padding: 6px 18px !important;
+        }
+        .stButton > button[kind="primary"]:hover {
+            background-color: #a82e13 !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-person_mode = st.sidebar.selectbox(
-    "Person Tracking Mode",
-    [
-        "🤖 Auto-Detect Persons (Computer Vision Engine)",
-        "1 Person",
-        "2 Persons",
-        "3 Persons",
-        "4 Persons",
-        "5 Persons"
-    ]
-)
+    # Native Streamlit "Start screening" button (works outside iframe sandbox)
+    _c1, _c2 = st.columns([0.85, 0.15])
+    with _c2:
+        if st.button("START SCREENING", type="primary"):
+            navigate_to('screening')
 
-st.sidebar.subheader("🌐 Contextual Metadata Controls")
-zone_id = st.sidebar.slider("Zone Location ID", 0, 5, 1)
-hour = st.sidebar.slider("Time of Day (Hour 0-23)", 0, 23, 14 if "Normal" in preset_scenario else (2 if "Loitering" in preset_scenario else 16))
-illumination = st.sidebar.slider("Illumination Level (0.0=Dark, 1.0=Bright)", 0.0, 1.0, 0.85 if "Normal" in preset_scenario else (0.15 if "Loitering" in preset_scenario else 0.70))
-crowd_count = st.sidebar.slider("Crowd Density Count", 0, 50, 3 if "Normal" in preset_scenario else (20 if "Panic" in preset_scenario else 2))
-baseline_norm = st.sidebar.slider("Baseline Normal Score", 0.0, 1.0, 0.9)
-face_occluded = st.sidebar.checkbox("Simulate Face Occlusion / Low Reliability", value=("Loitering" in preset_scenario or "Fall" in preset_scenario))
+    # Modify index.html
+    modified_html = RAW_INDEX_HTML
 
-st.sidebar.subheader("📡 Sensor Reliability & Noise Controls")
-face_conf = st.sidebar.slider("Facial Modality Reliability (w_face)", 0.0, 1.0, 0.05 if face_occluded else 0.90)
-pose_conf = st.sidebar.slider("Pose Modality Reliability (w_pose)", 0.0, 1.0, 0.95)
-video_conf = st.sidebar.slider("Temporal Video Reliability (w_video)", 0.0, 1.0, 0.88)
-context_conf = st.sidebar.slider("Context Metadata Reliability (w_context)", 0.0, 1.0, 0.92)
+    # Inject CSS override: make hero not force equal column heights, flowchart fills its content area
+    css_override = """
+<style>
+  .hero {
+    min-height: auto !important;
+    align-items: start !important;
+  }
+  .hero-r {
+    padding: 32px !important;
+    display: grid !important;
+    place-items: center !important;
+  }
+  .arch {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  .arch svg {
+    width: 100% !important;
+    height: auto !important;
+  }
+  .schema {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 48px !important;
+    align-items: center !important;
+  }
+  .schema .fusion-diagram {
+    max-width: 520px !important;
+    width: 100% !important;
+    justify-self: center !important;
+  }
+</style>
+"""
+    modified_html = modified_html.replace('</head>', css_override + '</head>')
 
-st.sidebar.subheader("⚙️ System Thresholds")
-risk_threshold = st.sidebar.slider("Anomaly Alarm Threshold P(Anomaly)", 0.1, 0.9, 0.5)
-reliability_warning_threshold = st.sidebar.slider("Min Reliability Warning Threshold", 0.3, 0.9, 0.6)
+    # Render the EXACT HTML with full CSS fidelity in an iframe
+    components.html(modified_html, height=3400, scrolling=True)
 
-# Scenario Baseline Parameter Mapping
-if "Normal" in preset_scenario:
-    scenario_category = "Normal Pedestrian Activity"
-    base_prob = 0.05
-    base_reliability = 0.95
-    base_face_w, base_pose_w, base_video_w, base_context_w = 0.42, 0.31, 0.15, 0.12
-elif "Fall" in preset_scenario:
-    scenario_category = "Sudden Fall / Collapse"
-elif "Fighting" in preset_scenario:
-    scenario_category = "Physical Fighting / Aggression"
-elif "Loitering" in preset_scenario:
-    scenario_category = "Night-time Server Room Loitering"
-elif "Panic" in preset_scenario:
-    scenario_category = "Panic / Erratic Crowd Motion"
-else:  # Custom Input Feed
-    scenario_category = "Normal Pedestrian Activity"
 
-# Main 5 Tabs Navigation
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📹 Live Feed & Multi-Person",
-    "🧠 Reliability Attention & XAI",
-    "🤖 Local RAG Incident Engine",
-    "📊 Executive Analytics & Log",
-    "⚙️ System Monitor & Settings"
-])
+# =============================================================================
+# PAGE 2: LIVE SURVEILLANCE SCREENING DASHBOARD
+# =============================================================================
+else:
 
-# ---------------------------------------------------------
-# TAB 1: LIVE SURVEILLANCE & MULTI-PERSON DETECTION
-# ---------------------------------------------------------
-with tab1:
-    col_input, col_results = st.columns([1.15, 0.85])
+    # Screening page CSS — same paper/grid design tokens, zero emojis
+    st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
 
-    with col_input:
-        st.markdown("### 📷 Camera Stream & Video Feed Input")
-        input_source = st.radio("Select Feed Source:", ["🔴 Live Stream", "Webcam Photo Capture", "Upload Image File", "Upload Video File (.mp4, .avi)"], horizontal=True)
+        :root {
+          --bg: #f4f2eb; --paper: #eae6dc; --ink: #0e0e0e; --rule: #0e0e0e;
+          --warn: #c43a1a; --ok: #1a8a5b;
+        }
 
-        input_img = None
-        uploaded_video_bytes = None
-        current_frame_idx = 0
-        live_webcam_active = False
+        html, body, [data-testid="stAppViewContainer"], .stApp {
+            background-color: var(--bg) !important;
+            color: var(--ink) !important;
+            font-family: 'IBM Plex Mono', ui-monospace, monospace !important;
+            font-size: 13px !important;
+            line-height: 1.5 !important;
+        }
+        h1,h2,h3,h4,h5,h6 {
+            font-family: 'Inter', sans-serif !important;
+            color: var(--ink) !important;
+            font-weight: 500 !important;
+        }
+        p, span, label, div, [data-testid="stMarkdownContainer"] p {
+            color: #3a3a3a !important;
+        }
 
-        if input_source == "🔴 Live Stream":
-            run_stream = st.checkbox("▶️ Start Continuous Live Stream Feed", value=False)
-            if run_stream:
-                live_webcam_active = True
-                st.info("🟢 Real-Time Continuous Surveillance Stream Active.")
-                frame_placeholder = st.empty()
+        .stApp::before {
+            content: "";
+            position: fixed; inset: 0;
+            pointer-events: none; z-index: 0;
+            background-image:
+                linear-gradient(rgba(14,14,14,.05) 1px,transparent 1px),
+                linear-gradient(90deg,rgba(14,14,14,.05) 1px,transparent 1px);
+            background-size: 48px 48px;
+        }
 
-                if cv2 and cv2.VideoCapture:
-                    try:
-                        cap = cv2.VideoCapture(0)
-                        if cap.isOpened():
-                            ret, live_frame = cap.read()
-                            if ret:
-                                frame_np = cv2.cvtColor(live_frame, cv2.COLOR_BGR2RGB)
+        section[data-testid="stSidebar"] {
+            background-color: var(--bg) !important;
+            border-right: 1px solid var(--rule) !important;
+        }
+        section[data-testid="stSidebar"] * {
+            color: var(--ink) !important;
+            font-family: 'IBM Plex Mono', monospace !important;
+        }
+
+        .paper-card {
+            background: var(--paper) !important;
+            border: 1px solid var(--rule) !important;
+            border-radius: 0px !important;
+            padding: 20px !important;
+            margin-bottom: 16px !important;
+        }
+        .paper-card-alert {
+            background: var(--paper) !important;
+            border: 1px solid var(--warn) !important;
+            border-left: 4px solid var(--warn) !important;
+            border-radius: 0 !important;
+            padding: 20px !important;
+            margin-bottom: 16px !important;
+        }
+        .paper-card-ok {
+            background: var(--paper) !important;
+            border: 1px solid var(--ok) !important;
+            border-left: 4px solid var(--ok) !important;
+            border-radius: 0 !important;
+            padding: 20px !important;
+            margin-bottom: 16px !important;
+        }
+        .badge-ok  { color: var(--ok) !important; font-weight:600; text-transform:uppercase; }
+        .badge-warn { color: var(--warn) !important; font-weight:600; text-transform:uppercase; }
+
+        .rag-box {
+            background: var(--bg) !important;
+            border: 1px solid var(--warn) !important;
+            padding: 16px !important;
+            font-family: 'IBM Plex Mono', monospace !important;
+            font-size: 12px !important;
+            color: var(--ink) !important;
+            margin-top: 12px;
+        }
+
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 0; background: var(--paper) !important;
+            padding: 0; border: 1px solid var(--rule) !important;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 38px; padding: 0 18px;
+            color: #666 !important; font-weight: 500;
+            font-size: 12px; font-family: 'IBM Plex Mono', monospace;
+            border-right: 1px solid var(--rule); border-radius: 0;
+        }
+        .stTabs [aria-selected="true"] {
+            background: var(--bg) !important;
+            color: var(--ink) !important;
+            border-bottom: 2px solid var(--warn) !important;
+            font-weight: 600;
+        }
+
+        .stProgress > div > div > div > div { background-color: var(--warn) !important; }
+
+        .stButton > button[kind="primary"] {
+            background-color: var(--warn) !important;
+            color: #fff !important;
+            border: 1px solid var(--warn) !important;
+            border-radius: 0 !important;
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            letter-spacing: .05em !important;
+        }
+        .stButton > button[kind="primary"]:hover {
+            background-color: #a82e13 !important;
+            border-color: #a82e13 !important;
+        }
+        .stButton > button[kind="secondary"] {
+            background-color: var(--paper) !important;
+            color: var(--ink) !important;
+            border: 1px solid var(--rule) !important;
+            border-radius: 0 !important;
+            font-family: 'IBM Plex Mono', monospace !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Top Header
+    col_nav1, col_nav2 = st.columns([1, 4])
+    with col_nav1:
+        if st.button("Back to overview"):
+            navigate_to('home')
+    with col_nav2:
+        st.markdown("""
+        <div style="font-family:'IBM Plex Mono'; font-size:13px; font-weight:600; padding-top:6px; color:#0e0e0e;">
+            SENTINEL<span style="color:#c43a1a;">/</span>AI — LIVE SCREENING ENGINE
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<hr style='border-top:1px solid #0e0e0e; margin:10px 0 20px 0;'>", unsafe_allow_html=True)
+
+    # Sidebar
+    with st.sidebar:
+        st.markdown("### OPERATIONAL CONTROLS")
+        preset_scenario = st.selectbox("Surveillance Scenario Preset", [
+            "1. Normal Pedestrian Activity",
+            "2. Sudden Fall / Collapse",
+            "3. Physical Fighting / Aggression",
+            "4. Night-time Server Room Loitering",
+            "5. Panic / Erratic Crowd Motion",
+            "6. Custom Input Feed"
+        ])
+        person_mode = st.selectbox("Person Tracking Mode", [
+            "Auto-Detect Persons (Computer Vision Engine)",
+            "1 Person", "2 Persons", "3 Persons", "4 Persons", "5 Persons"
+        ])
+        st.markdown("### CONTEXTUAL METADATA")
+        zone_id = st.slider("Zone Location ID", 0, 5, 1)
+        hour = st.slider("Time of Day (Hour 0-23)", 0, 23, 14 if "Normal" in preset_scenario else (2 if "Loitering" in preset_scenario else 16))
+        illumination = st.slider("Illumination Level", 0.0, 1.0, 0.85 if "Normal" in preset_scenario else (0.15 if "Loitering" in preset_scenario else 0.70))
+        crowd_count = st.slider("Crowd Density Count", 0, 50, 3 if "Normal" in preset_scenario else (20 if "Panic" in preset_scenario else 2))
+        baseline_norm = st.slider("Baseline Normal Score", 0.0, 1.0, 0.9)
+        face_occluded = st.checkbox("Simulate Face Occlusion", value=("Loitering" in preset_scenario or "Fall" in preset_scenario))
+        st.markdown("### SENSOR RELIABILITY")
+        face_conf = st.slider("w_face", 0.0, 1.0, 0.05 if face_occluded else 0.90)
+        pose_conf = st.slider("w_pose", 0.0, 1.0, 0.95)
+        video_conf = st.slider("w_video", 0.0, 1.0, 0.88)
+        context_conf = st.slider("w_context", 0.0, 1.0, 0.92)
+
+    # Scenario mapping
+    if "Normal" in preset_scenario:    scenario_category = "Normal Pedestrian Activity"
+    elif "Fall" in preset_scenario:    scenario_category = "Sudden Fall / Collapse"
+    elif "Fighting" in preset_scenario: scenario_category = "Physical Fighting / Aggression"
+    elif "Loitering" in preset_scenario: scenario_category = "Night-time Server Room Loitering"
+    elif "Panic" in preset_scenario:   scenario_category = "Panic / Erratic Crowd Motion"
+    else:                              scenario_category = "Normal Pedestrian Activity"
+
+    # Tabs
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "Live Feed & CV Engine",
+        "Attention Weights & XAI",
+        "Grounded RAG Alert",
+        "Audit & Analytics",
+        "Diagnostics"
+    ])
+
+    # ---- TAB 1: LIVE FEED ----
+    with tab1:
+        col_input, col_results = st.columns([1.15, 0.85])
+
+        with col_input:
+            st.markdown("### Camera Stream & Video Feed")
+            input_source = st.radio("Feed Source:", ["Live Stream", "Webcam Snapshot", "Upload Image", "Upload Video (.mp4, .avi)"], horizontal=True)
+
+            input_img = None
+            uploaded_video_bytes = None
+            current_frame_idx = 0
+
+            if input_source == "Live Stream":
+                run_stream = st.checkbox("Start Continuous Live Stream", value=False)
+                if run_stream:
+                    if cv2 and cv2.VideoCapture:
+                        try:
+                            cap = cv2.VideoCapture(0)
+                            if cap.isOpened():
+                                ret, live_frame = cap.read()
+                                frame_np = cv2.cvtColor(live_frame, cv2.COLOR_BGR2RGB) if ret else processor.create_synthetic_frame(anomaly_type=scenario_category)
+                                cap.release()
                             else:
                                 frame_np = processor.create_synthetic_frame(anomaly_type=scenario_category)
-                            cap.release()
-                        else:
+                        except Exception:
                             frame_np = processor.create_synthetic_frame(anomaly_type=scenario_category)
-                    except Exception:
+                    else:
                         frame_np = processor.create_synthetic_frame(anomaly_type=scenario_category)
                 else:
                     frame_np = processor.create_synthetic_frame(anomaly_type=scenario_category)
+            elif input_source == "Webcam Snapshot":
+                img_file = st.camera_input("Take Snapshot")
+                if img_file is not None:
+                    input_img = Image.open(img_file)
+                frame_np = np.array(input_img.convert('RGB')) if input_img is not None else np.ones((480, 640, 3), dtype=np.uint8) * 40
+            elif input_source == "Upload Image":
+                img_file = st.file_uploader("Upload Image Frame", type=['png', 'jpg', 'jpeg'])
+                if img_file is not None:
+                    input_img = Image.open(img_file)
+                frame_np = np.array(input_img.convert('RGB')) if input_img is not None else np.ones((480, 640, 3), dtype=np.uint8) * 40
             else:
-                frame_np = processor.create_synthetic_frame(anomaly_type=scenario_category)
-        elif input_source == "Webcam Photo Capture":
-            img_file = st.camera_input("Take Snapshot")
-            if img_file is not None:
-                input_img = Image.open(img_file)
-            frame_np = np.array(input_img.convert('RGB')) if input_img is not None else np.ones((480, 640, 3), dtype=np.uint8) * 40
-        elif input_source == "Upload Image File":
-            img_file = st.file_uploader("Upload Image Frame", type=['png', 'jpg', 'jpeg'])
-            if img_file is not None:
-                input_img = Image.open(img_file)
-            frame_np = np.array(input_img.convert('RGB')) if input_img is not None else np.ones((480, 640, 3), dtype=np.uint8) * 40
-        else:
-            vid_file = st.file_uploader("Upload Surveillance Video File", type=['mp4', 'avi', 'mov'])
-            if vid_file is not None:
-                uploaded_video_bytes = vid_file.read()
-            if uploaded_video_bytes is not None:
-                vid_out = processor.process_video_bytes(uploaded_video_bytes, anomaly_type=scenario_category)
-                if isinstance(vid_out, tuple):
-                    frames, fps = vid_out
+                vid_file = st.file_uploader("Upload Video File", type=['mp4', 'avi', 'mov'])
+                if vid_file is not None:
+                    uploaded_video_bytes = vid_file.read()
+                if uploaded_video_bytes is not None:
+                    vid_out = processor.process_video_bytes(uploaded_video_bytes, anomaly_type=scenario_category)
+                    frames, fps = (vid_out if isinstance(vid_out, tuple) else (vid_out, 30))
+                    if len(frames) > 0:
+                        st.write(f"Video: {len(frames)} frames @ {fps} FPS")
+                        current_frame_idx = st.slider("Frame Index", 0, len(frames)-1, 0)
+                        frame_np = frames[current_frame_idx]
+                    else:
+                        frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
                 else:
-                    frames, fps = vid_out, 30
+                    frame_np = processor.create_synthetic_frame(anomaly_type=scenario_category)
 
-                if len(frames) > 0:
-                    st.write(f"🎬 **Video Sequence:** `{len(frames)}` frames extracted @ `{fps}` FPS")
-                    current_frame_idx = st.slider("Scrub Video Frame Index", 0, len(frames)-1, 0)
-                    frame_np = frames[current_frame_idx]
-                else:
-                    frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
-            else:
+            override_count = None if "Auto-Detect" in person_mode else int(person_mode.split()[0])
+
+            annotated_frame, persons_data = processor.process_camera_frame_multi(
+                frame_np, anomaly_type=scenario_category, is_occluded=face_occluded,
+                prob=0.05, reliability=0.95, override_person_count=override_count
+            )
+            st.image(annotated_frame, caption=f"MediaPipe 33-Landmark Skeleton Overlay [Frame #{current_frame_idx}]", use_container_width=True)
+
+        with col_results:
+            st.markdown("### Threat Diagnosis")
+
+            frame_meta = {
+                'zone_id': zone_id, 'hour': hour, 'illumination': illumination,
+                'crowd_count': crowd_count, 'baseline_norm': baseline_norm, 'is_occluded': face_occluded,
+            }
+
+            if isinstance(frame_np, tuple): frame_np = frame_np[0]
+            if frame_np is None or not isinstance(frame_np, np.ndarray):
                 frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
 
-        # Build override hint for video processor overlay
-        override_count = None if "Auto-Detect" in person_mode else int(person_mode.split()[0])
+            inference_result = engine.run_inference(frame_np=frame_np, metadata=frame_meta, verbose=False)
 
-        # Run visual overlay (MediaPipe pose + face detection for bounding boxes)
-        annotated_frame, persons_data = processor.process_camera_frame_multi(
-            frame_np,
-            anomaly_type="Normal Pedestrian Activity",  # overlay neutral until model runs
-            is_occluded=face_occluded,
-            prob=0.05,
-            reliability=0.95,
-            override_person_count=override_count
-        )
+            raw_prob = inference_result['anomaly_probability']
+            raw_reliability = inference_result['reliability_score']
 
-        st.image(annotated_frame, caption=f"MediaPipe Computer Vision Overlay [Frame #{current_frame_idx}]", use_container_width=True)
+            def calibrate(p, temp=2.5, min_p=0.03, max_p=0.97):
+                if p <= 0.0: return min_p
+                if p >= 1.0: return max_p
+                logit = np.log(p / (1.0 - p + 1e-9))
+                return float(np.clip(1.0 / (1.0 + np.exp(-logit / temp)), min_p, max_p))
 
-        # Explicit Trigger Button for Real Multimodal Anomaly Detection
-        run_detection = st.button("🔍 Run Multimodal Anomaly Detection & RAG Diagnosis", type="primary", use_container_width=True)
+            calc_prob = calibrate(raw_prob)
+            calc_reliability = float(np.clip(raw_reliability, 0.55, 0.97))
+            calc_category = inference_result['predicted_category']
+            attn_weights = inference_result['attention_weights']
 
-    with col_results:
-        st.markdown("### 🚨 Threat Diagnosis & Intent Engine")
+            _, persons_data = processor.process_camera_frame_multi(
+                frame_np, anomaly_type=calc_category, is_occluded=face_occluded,
+                prob=calc_prob, reliability=calc_reliability, override_person_count=override_count
+            )
 
-        # ──────────────────────────────────────────────────────────────────────
-        # REAL MULTIMODAL INFERENCE — All four branch models + fusion network
-        # ──────────────────────────────────────────────────────────────────────
-        frame_meta = {
-            'zone_id':       zone_id,
-            'hour':          hour,
-            'illumination':  illumination,
-            'crowd_count':   crowd_count,
-            'baseline_norm': baseline_norm,
-            'is_occluded':   face_occluded,
-        }
+            if persons_data and inference_result.get('face_detected', False):
+                persons_data[0]['emotion'] = inference_result['face_emotion']
+                persons_data[0]['emotion_conf'] = float(inference_result['face_confidence'])
+                persons_data[0]['emotion_dict'] = inference_result['face_probs']
 
-        if isinstance(frame_np, tuple):
-            frame_np = frame_np[0]
-        if frame_np is None or not isinstance(frame_np, np.ndarray):
-            frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
-
-        # Run genuine neural network inference on the frame
-        inference_result = engine.run_inference(
-            frame_np=frame_np,
-            metadata=frame_meta,
-            verbose=False
-        )
-
-        # Apply temperature scaling to prevent extreme softmax saturation
-        # (maps 0.0/1.0 extremes to calibrated 0.05/0.95 range)
-        raw_prob = inference_result['anomaly_probability']
-        raw_reliability = inference_result['reliability_score']
-
-        # Temperature calibration: scale logits to produce calibrated probabilities
-        def calibrate(p, temp=2.5, min_p=0.03, max_p=0.97):
-            """Apply temperature scaling to prevent extreme probability saturation."""
-            if p <= 0.0: return min_p
-            if p >= 1.0: return max_p
-            logit = np.log(p / (1.0 - p + 1e-9))
-            cal_logit = logit / temp
-            cal_p = 1.0 / (1.0 + np.exp(-cal_logit))
-            return float(np.clip(cal_p, min_p, max_p))
-
-        calc_prob = calibrate(raw_prob)
-        calc_reliability = float(np.clip(raw_reliability, 0.55, 0.97))
-        calc_category = inference_result['predicted_category']
-        attn_weights = inference_result['attention_weights']
-
-        # Update visual overlay with real model predictions
-        annotated_frame_updated, persons_data = processor.process_camera_frame_multi(
-            frame_np,
-            anomaly_type=calc_category,
-            is_occluded=face_occluded,
-            prob=calc_prob,
-            reliability=calc_reliability,
-            override_person_count=override_count
-        )
-
-        # Update emotion data in persons_data from real face model output
-        if persons_data and inference_result.get('face_detected', False):
-            persons_data[0]['emotion'] = inference_result['face_emotion']
-            persons_data[0]['emotion_conf'] = float(inference_result['face_confidence'])
-            persons_data[0]['emotion_dict'] = inference_result['face_probs']
-
-        is_masked_or_occluded = face_occluded
-        dominant_modality = max(attn_weights, key=attn_weights.get)
-
-        fusion_res = {
-            'predicted_category': calc_category,
-            'anomaly_probability': float(calc_prob),
-            'reliability_score': float(calc_reliability),
-            'attention_weights': attn_weights,
-            'category_probs': inference_result['category_probs'],
-        }
-
-        prob_pct = int(calc_prob * 100)
-        rel_pct  = int(calc_reliability * 100)
-
-        # Model diagnostics (shown to user)
-        ckpt_status = inference_result['checkpoints_loaded']
-        all_ckpts_ok = all(ckpt_status.values())
-
-        if all_ckpts_ok:
-            st.success(f"Model: All 4 branch checkpoints loaded. Face={inference_result['face_emotion']} "
-                       f"({inference_result['face_confidence']*100:.0f}%), "
-                       f"Pose={inference_result['pose_class']}, "
-                       f"Video={inference_result['video_class']}, "
-                       f"Raw_P(Anomaly)={raw_prob:.3f}")
-        else:
-            st.warning(f"Checkpoint status: {ckpt_status}")
-
-        logger.log_incident(
-            anomaly_type=calc_category,
-            risk_prob=calc_prob,
-            reliability_score=calc_reliability,
-            dominant_modality=dominant_modality.capitalize(),
-            zone=f"Zone-{zone_id}",
-            frame_idx=current_frame_idx,
-            rag_explanation=f"Genuine neural network inference: {calc_category} with {prob_pct}% risk and {rel_pct}% reliability."
-        )
-
-        if "normal" in calc_category.lower():
-            st.markdown(f"""
-            <div class="saas-card" style="border-left: 4px solid #22C55E;">
-                <span class="badge-normal">NORMAL MONITORING STATUS</span>
-                <div class="metric-value text-emerald">{prob_pct}% Anomaly Risk</div>
-                <div style="font-size: 0.88rem; color: #475569;"><b>Fusion Reliability Index:</b> <span class="text-blue">{rel_pct}%</span></div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="saas-card" style="border-left: 4px solid #EF4444;">
-                <span class="badge-alert">⚠️ ANOMALY DETECTED: {calc_category.upper()}</span>
-                <div class="metric-value text-rose">{prob_pct}% Anomaly Risk Probability</div>
-                <div style="font-size: 0.88rem; color: #475569;"><b>Fusion Reliability Index:</b> <span class="text-blue">{rel_pct}%</span></div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown("#### 📊 Dynamic Modality Attention Weights")
-        for mod, weight in attn_weights.items():
-            st.write(f"**{mod.capitalize()} Modality Weight:** `{weight*100:.1f}%`")
-            st.progress(float(weight))
-
-        st.markdown("#### 🤖 Grounded RAG Alert & Diagnostic Rationale")
-        rag_alert = xai_rag.generate_rag_alert(
-            fusion_res,
-            metadata={
-                'zone': f'Zone-{zone_id}',
-                'hour': hour,
-                'is_occluded': is_masked_or_occluded,
-                'action': persons_data[0].get('action', 'Standing') if persons_data else 'Standing',
-                'emotion': persons_data[0].get('emotion', 'Neutral') if persons_data else 'Neutral'
+            dominant_modality = max(attn_weights, key=attn_weights.get)
+            fusion_res = {
+                'predicted_category': calc_category,
+                'anomaly_probability': float(calc_prob),
+                'reliability_score': float(calc_reliability),
+                'attention_weights': attn_weights,
+                'category_probs': inference_result['category_probs'],
             }
-        )
-        st.info(rag_alert['alert_text'])
 
-    st.markdown("---")
-    st.markdown(f"### 👥 Tracked Individuals ({len(persons_data)} Person(s) Active)")
+            prob_pct = int(calc_prob * 100)
+            rel_pct  = int(calc_reliability * 100)
 
-    person_count = len(persons_data)
-    cards_per_row = 4 if person_count >= 4 else max(1, person_count)
-    cols = st.columns(cards_per_row)
+            logger.log_incident(
+                anomaly_type=calc_category, risk_prob=calc_prob,
+                reliability_score=calc_reliability, dominant_modality=dominant_modality.capitalize(),
+                zone=f"Zone-{zone_id}", frame_idx=current_frame_idx,
+                rag_explanation=f"Inference: {calc_category}, {prob_pct}% risk, {rel_pct}% reliability."
+            )
 
-    for idx, person in enumerate(persons_data):
-        col_target = cols[idx % cards_per_row]
-        with col_target:
+            if "normal" in calc_category.lower():
+                st.markdown(f"""
+                <div class="paper-card-ok">
+                    <span class="badge-ok">NORMAL MONITORING STATUS</span>
+                    <div style="font-size:2.2rem; font-weight:700; color:var(--ok); margin:6px 0;">{prob_pct}% Anomaly Risk</div>
+                    <div style="font-size:.88rem;"><b>Fusion Reliability:</b> {rel_pct}%</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="paper-card-alert">
+                    <span class="badge-warn">ANOMALY DETECTED: {calc_category.upper()}</span>
+                    <div style="font-size:2.2rem; font-weight:700; color:var(--warn); margin:6px 0;">{prob_pct}% Anomaly Risk</div>
+                    <div style="font-size:.88rem;"><b>Fusion Reliability:</b> {rel_pct}%</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown("#### Attention Weights")
+            for mod, weight in attn_weights.items():
+                st.write(f"**{mod.capitalize()}:** `{weight*100:.1f}%`")
+                st.progress(float(weight))
+
+            st.markdown("#### RAG Explanation")
+            rag_alert = xai_rag.generate_rag_alert(
+                fusion_res,
+                metadata={
+                    'zone': f'Zone-{zone_id}', 'hour': hour,
+                    'is_occluded': face_occluded,
+                    'action': persons_data[0].get('action', 'Standing') if persons_data else 'Standing',
+                    'emotion': persons_data[0].get('emotion', 'Neutral') if persons_data else 'Neutral'
+                }
+            )
             st.markdown(f"""
-            <div class="saas-card">
-                <h4 style="margin: 0 0 8px 0; color: #0F172A;">👤 Person {person['id']}</h4>
-                <p style="margin: 3px 0; font-size: 0.86rem; color: #475569;"><b>Action:</b> <span class="text-blue">{person['action']}</span></p>
-                <p style="margin: 3px 0; font-size: 0.86rem; color: #475569;"><b>Emotion:</b> <span class="text-amber">{person['emotion']} ({int(round(person['emotion_conf']*100 if person['emotion_conf'] <= 1.0 else person['emotion_conf']))}%)</span></p>
-                <p style="margin: 3px 0; font-size: 0.86rem; color: #475569;"><b>Pose Status:</b> {person['pose_status']}</p>
+            <div class="rag-box">
+                <pre style="white-space:pre-wrap; font-family:'IBM Plex Mono',monospace; font-size:11px; margin:0; color:var(--ink);">{rag_alert['alert_text']}</pre>
             </div>
             """, unsafe_allow_html=True)
 
-    if len(persons_data) > 0:
-        first_person_emotions = persons_data[0]['emotion_dict']
-        fig_emo = px.bar(
-            x=list(first_person_emotions.keys()),
-            y=list(first_person_emotions.values()),
-            labels={'x': 'Facial Emotion Class', 'y': 'Probability'},
-            title=f"7-Class Facial Emotion Breakdown (Person 1 - Frame #{current_frame_idx})",
-            color=list(first_person_emotions.values()),
-            color_continuous_scale="Blues"
-        )
-        fig_emo.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#334155'),
-            height=250,
-            margin=dict(l=20, r=20, t=40, b=20)
-        )
-        st.plotly_chart(fig_emo, use_container_width=True)
+        st.markdown("---")
+        st.markdown(f"### Tracked Individuals ({len(persons_data)} active)")
+        cards_per_row = min(4, max(1, len(persons_data)))
+        cols = st.columns(cards_per_row)
+        for idx, person in enumerate(persons_data):
+            with cols[idx % cards_per_row]:
+                st.markdown(f"""
+                <div class="paper-card">
+                    <h4 style="margin:0 0 6px 0;color:var(--ink);">Person {person['id']}</h4>
+                    <p style="margin:3px 0;font-size:.85rem;"><b>Action:</b> {person['action']}</p>
+                    <p style="margin:3px 0;font-size:.85rem;"><b>Emotion:</b> {person['emotion']} ({int(round(person['emotion_conf']*100 if person['emotion_conf']<=1.0 else person['emotion_conf']))}%)</p>
+                    <p style="margin:3px 0;font-size:.85rem;"><b>Pose:</b> {person['pose_status']}</p>
+                </div>
+                """, unsafe_allow_html=True)
 
-# ---------------------------------------------------------
-# TAB 2: RELIABILITY-AWARE ATTENTION & EXPLAINABLE AI (XAI)
-# ---------------------------------------------------------
-with tab2:
-    st.markdown("### 🧠 Explainable AI (XAI) & Spatial Activation Visualizations")
+        if persons_data:
+            emo = persons_data[0]['emotion_dict']
+            fig_emo = px.bar(x=list(emo.keys()), y=list(emo.values()),
+                labels={'x':'Emotion', 'y':'Probability'},
+                title=f"7-Class Emotion Breakdown (Person 1, Frame #{current_frame_idx})",
+                color=list(emo.values()), color_continuous_scale="Reds")
+            fig_emo.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='#0e0e0e'), height=240, margin=dict(l=20,r=20,t=40,b=20))
+            st.plotly_chart(fig_emo, use_container_width=True)
 
-    col_cam, col_shap = st.columns([1.1, 0.9])
+    # ---- TAB 2: XAI ----
+    with tab2:
+        st.markdown("### Attention Weights & XAI")
+        col_cam, col_shap = st.columns([1.1, 0.9])
+        with col_cam:
+            st.markdown("#### Grad-CAM Heatmap")
+            if isinstance(frame_np, tuple): frame_np = frame_np[0]
+            if frame_np is None or not isinstance(frame_np, np.ndarray):
+                frame_np = np.ones((480,640,3), dtype=np.uint8)*40
+            gradcam = xai_rag.generate_gradcam_heatmap(frame_shape=(frame_np.shape[0], frame_np.shape[1]), anomaly_type=calc_category)
+            alpha = st.slider("Heatmap Opacity", 0.1, 0.9, 0.5)
+            st.image(XAIVisualizer.apply_gradcam_overlay(frame_np, gradcam, alpha=alpha),
+                caption=f"Grad-CAM [{calc_category}]", use_container_width=True)
+        with col_shap:
+            st.markdown("#### SHAP Attribution")
+            shap_scores = xai_rag.compute_shap_feature_importance(attn_weights, fusion_res['category_probs'])
+            st.plotly_chart(XAIVisualizer.create_shap_bar_chart(shap_scores), use_container_width=True)
+            st.markdown("#### Attention Radar")
+            st.plotly_chart(XAIVisualizer.create_attention_radar_chart(attn_weights), use_container_width=True)
 
-    with col_cam:
-        st.markdown("#### 🔴 Grad-CAM Spatial Activation Heatmap Overlay")
-        if isinstance(frame_np, tuple):
-            frame_np = frame_np[0]
-        if frame_np is None or not isinstance(frame_np, np.ndarray):
-            frame_np = np.ones((480, 640, 3), dtype=np.uint8) * 40
+    # ---- TAB 3: RAG ----
+    with tab3:
+        st.markdown("### RAG Precedent Search")
+        precedent = xai_rag.retrieve_incident_precedent(calc_category, attn_weights, zone=f"Zone-{zone_id}")
+        c1, c2 = st.columns([1.05, 0.95])
+        with c1:
+            sim = f" ({int(precedent.get('similarity_score',0.95)*100)}% match)" if 'similarity_score' in precedent else ""
+            st.markdown(f"""
+            <div class="paper-card-alert">
+                <span class="badge-warn">TOP MATCHED PRECEDENT</span>
+                <h3 style="margin:10px 0 6px 0;color:var(--ink);">{precedent.get('id','INC-101')}{sim}</h3>
+                <p style="margin:4px 0;font-size:.9rem;"><b>Category:</b> {precedent.get('category','N/A')}</p>
+                <p style="margin:4px 0;font-size:.9rem;"><b>Zone:</b> {precedent.get('zone','N/A')}</p>
+                <p style="margin:4px 0;font-size:.9rem;"><b>Primary Modality:</b> {precedent.get('primary_modality','N/A')}</p>
+                <p style="margin:8px 0;font-size:.9rem;color:#3a3a3a;"><b>Note:</b> <i>"{precedent.get('description','')}"</i></p>
+                <p style="margin:6px 0;font-size:.9rem;"><b>Action:</b> <span class="badge-ok">{precedent.get('recommended_action','')}</span></p>
+            </div>
+            """, unsafe_allow_html=True)
+        with c2:
+            st.markdown("#### Knowledge Base")
+            kb = pd.DataFrame(xai_rag.load_knowledge_base())
+            st.dataframe(kb[['id','category','zone','primary_modality','recommended_action']], use_container_width=True, height=260)
 
-        gradcam_heatmap = xai_rag.generate_gradcam_heatmap(
-            frame_shape=(frame_np.shape[0], frame_np.shape[1]),
-            anomaly_type=calc_category
-        )
-        blend_alpha = st.slider("Grad-CAM Heatmap Opacity (Alpha)", 0.1, 0.9, 0.5)
-        gradcam_frame = XAIVisualizer.apply_gradcam_overlay(frame_np, gradcam_heatmap, alpha=blend_alpha)
-        st.image(gradcam_frame, caption=f"Grad-CAM Spatial Activation Overlay [{calc_category}]", use_container_width=True)
+    # ---- TAB 4: ANALYTICS ----
+    with tab4:
+        st.markdown("### Analytics & Event Log")
+        history_df = logger.get_history_dataframe()
+        total = len(logger.history)
+        high = sum(1 for e in logger.history if e.get('risk_score',0)>0.5)
+        fps = monitor.update_fps()
+        rel = round(np.mean([e.get('reliability_score',0) for e in logger.history])*100, 1) if logger.history else 92.4
 
-    with col_shap:
-        st.markdown("#### 📈 SHAP Modality Feature Attribution Scores")
-        shap_scores = xai_rag.compute_shap_feature_importance(attn_weights, fusion_res['category_probs'])
-        fig_shap = XAIVisualizer.create_shap_bar_chart(shap_scores)
-        st.plotly_chart(fig_shap, use_container_width=True)
+        c1,c2,c3,c4 = st.columns(4)
+        c1.markdown(f'<div class="paper-card"><div>TOTAL INCIDENTS</div><div style="font-size:2rem;font-weight:700;">{total}</div></div>', unsafe_allow_html=True)
+        c2.markdown(f'<div class="paper-card"><div>HIGH RISK</div><div style="font-size:2rem;font-weight:700;color:var(--warn);">{high}</div></div>', unsafe_allow_html=True)
+        c3.markdown(f'<div class="paper-card"><div>FPS</div><div style="font-size:2rem;font-weight:700;color:var(--ok);">{fps}</div></div>', unsafe_allow_html=True)
+        c4.markdown(f'<div class="paper-card"><div>RELIABILITY</div><div style="font-size:2rem;font-weight:700;">{rel}%</div></div>', unsafe_allow_html=True)
 
-        st.markdown("#### 🎯 Multimodal Attention Allocation Radar")
-        fig_radar = XAIVisualizer.create_attention_radar_chart(attn_weights)
-        st.plotly_chart(fig_radar, use_container_width=True)
+        st.dataframe(history_df, use_container_width=True, height=250)
+        e1,e2,e3,e4 = st.columns(4)
+        with e1: st.download_button("Export CSV", data=logger.export_csv(), file_name="incidents.csv", mime="text/csv")
+        with e2: st.download_button("Export JSON", data=logger.export_json(), file_name="incidents.json", mime="application/json")
+        with e3: st.download_button("Export HTML", data=logger.export_html_report(), file_name="report.html", mime="text/html")
+        with e4:
+            if st.button("Clear Log"):
+                logger.clear_history()
+                st.success("Cleared.")
 
-    st.markdown("---")
-    st.markdown("### 📐 Mathematical Formulation & Reliability Gating")
-    st.markdown(r"""
-    The framework computes dynamic modality confidence weights $w_m \in [0, 1]$ for each modality branch $m \in \{f, p, v, c\}$:
-    $$
-    \tilde{\alpha}_m = \exp\left(\frac{W_a h_m + b_a}{\tau}\right) \cdot w_m
-    \quad \implies \quad
-    \alpha_m = \frac{\tilde{\alpha}_m}{\sum_{k} \tilde{\alpha}_k}
-    $$
-    **Overall Multimodal Reliability Index:**
-    $$
-    R = \sum_{m \in \{f, p, v, c\}} \alpha_m \cdot w_m
-    $$
-    """)
+    # ---- TAB 5: DIAGNOSTICS ----
+    with tab5:
+        st.markdown("### Hardware & Latency")
+        hw = monitor.get_hardware_metrics()
+        g1,g2,g3 = st.columns(3)
+        with g1: st.plotly_chart(monitor.create_gauge_chart(hw['cpu_percent'], "CPU"), use_container_width=True)
+        with g2: st.plotly_chart(monitor.create_gauge_chart(hw['ram_percent'], "RAM"), use_container_width=True)
+        with g3:
+            st.markdown(f"""
+            <div class="paper-card" style="height:180px;">
+                <div style="font-weight:700;">HARDWARE</div>
+                <div style="margin-top:10px;"><b>GPU:</b> {hw['gpu_status']}</div>
+                <div style="margin-top:6px;"><b>RAM:</b> {hw['ram_used_gb']} / {hw['ram_total_gb']} GB</div>
+                <div style="margin-top:6px;"><b>Latency:</b> <span class="badge-ok">{hw['total_inference_latency']} ms</span></div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.plotly_chart(monitor.create_latency_bar_chart(), use_container_width=True)
+        st.markdown("#### Logs")
+        for log in reversed(monitor.logs[-10:]):
+            st.text(f"[{log['timestamp']}] [{log['level']}] {log['message']}")
 
-# ---------------------------------------------------------
-# TAB 3: LOCAL RAG INCIDENT PRECEDENT ENGINE
-# ---------------------------------------------------------
-with tab3:
-    st.markdown("### 🤖 Local RAG Precedent Search & Grounded Explanations")
-    st.markdown("Search historical surveillance incident vector embeddings from `incident_kb.json` using scikit-learn TF-IDF and Cosine Vector Similarity.")
-
-    precedent = xai_rag.retrieve_incident_precedent(calc_category, attn_weights, zone=f"Zone-{zone_id}")
-
-    col_prec1, col_prec2 = st.columns([1.05, 0.95])
-    with col_prec1:
-        sim_score_str = f" ({int(precedent.get('similarity_score', 0.95)*100)}% Vector Match)" if 'similarity_score' in precedent else ""
-        st.markdown(f"""
-        <div class="saas-card" style="border-left: 4px solid #3B82F6;">
-            <span class="badge-info">TOP MATCHED INCIDENT PRECEDENT</span>
-            <h3 style="margin: 10px 0 6px 0; color: #0F172A;">📌 {precedent.get('id', 'INC-101')}{sim_score_str}</h3>
-            <p style="margin: 4px 0; font-size: 0.9rem; color: #334155;"><b>Category:</b> <span class="text-amber">{precedent.get('category', 'N/A')}</span></p>
-            <p style="margin: 4px 0; font-size: 0.9rem; color: #334155;"><b>Zone Location:</b> {precedent.get('zone', 'N/A')}</p>
-            <p style="margin: 4px 0; font-size: 0.9rem; color: #334155;"><b>Primary Modality:</b> {precedent.get('primary_modality', 'N/A')}</p>
-            <p style="margin: 8px 0; font-size: 0.9rem; color: #475569;"><b>Historical Precedent Note:</b> <i>"{precedent.get('description', '')}"</i></p>
-            <p style="margin: 6px 0; font-size: 0.9rem; color: #334155;"><b>Recommended Security Action:</b> <span class="text-emerald">{precedent.get('recommended_action', '')}</span></p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_prec2:
-        st.markdown("#### 📚 Knowledge Base Incident Precedent Vectors")
-        kb_data = xai_rag.load_knowledge_base()
-        kb_df = pd.DataFrame(kb_data)
-        st.dataframe(kb_df[['id', 'category', 'zone', 'primary_modality', 'recommended_action']], use_container_width=True, height=260)
-
-# ---------------------------------------------------------
-# TAB 4: EXECUTIVE ANALYTICS & HISTORICAL INCIDENT LOG
-# ---------------------------------------------------------
-with tab4:
-    st.markdown("### 📊 Executive Surveillance Analytics & Event Log")
-
-    history_df = logger.get_history_dataframe()
-    total_events = len(logger.history)
-    high_risk_count = sum(1 for e in logger.history if e.get('risk_score', 0) > 0.5)
-    avg_fps = monitor.update_fps()
-    avg_rel = round(np.mean([e.get('reliability_score', 0) for e in logger.history])*100, 1) if logger.history else 92.4
-
-    col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
-    col_kpi1.markdown(f'<div class="saas-card"><div class="metric-label">Total Logged Incidents</div><div class="metric-value text-blue">{total_events}</div></div>', unsafe_allow_html=True)
-    col_kpi2.markdown(f'<div class="saas-card"><div class="metric-label">High Risk Alerts</div><div class="metric-value text-rose">{high_risk_count}</div></div>', unsafe_allow_html=True)
-    col_kpi3.markdown(f'<div class="saas-card"><div class="metric-label">Real-Time FPS</div><div class="metric-value text-emerald">{avg_fps}</div></div>', unsafe_allow_html=True)
-    col_kpi4.markdown(f'<div class="saas-card"><div class="metric-label">Mean System Reliability</div><div class="metric-value text-amber">{avg_rel}%</div></div>', unsafe_allow_html=True)
-
-    col_chart1, col_chart2 = st.columns([1, 1])
-
-    with col_chart1:
-        st.markdown("#### 📈 Incident Category Risk Distribution")
-        if logger.history:
-            cats = [e.get('category', 'Normal') for e in logger.history]
-            fig_pie = px.pie(names=cats, title="Logged Event Category Ratio", color_discrete_sequence=px.colors.sequential.Blues)
-            fig_pie.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#334155'), height=260)
-            st.plotly_chart(fig_pie, use_container_width=True)
-
-    with col_chart2:
-        st.markdown("#### 🌐 Primary Modality Trigger Frequency")
-        if logger.history:
-            mods = [e.get('dominant_modality', 'Pose') for e in logger.history]
-            fig_bar = px.histogram(x=mods, labels={'x': 'Modality Driver'}, title="Modality Trigger Frequency", color_discrete_sequence=['#3B82F6'])
-            fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='#334155'), height=260)
-            st.plotly_chart(fig_bar, use_container_width=True)
-
-    st.markdown("#### 📋 Interactive Filterable Incident History Log")
-    st.dataframe(history_df, use_container_width=True, height=250)
-
-    col_exp1, col_exp2, col_exp3, col_exp4 = st.columns(4)
-    with col_exp1:
-        st.download_button("📥 Export CSV Report", data=logger.export_csv(), file_name="surveillance_incidents.csv", mime="text/csv")
-    with col_exp2:
-        st.download_button("📥 Export JSON Report", data=logger.export_json(), file_name="surveillance_incidents.json", mime="application/json")
-    with col_exp3:
-        st.download_button("📥 Export HTML Report", data=logger.export_html_report(), file_name="surveillance_report.html", mime="text/html")
-    with col_exp4:
-        if st.button("🗑️ Clear Log History"):
-            logger.clear_history()
-            st.success("Log history cleared!")
-
-# ---------------------------------------------------------
-# TAB 5: SYSTEM MONITOR & SETTINGS
-# ---------------------------------------------------------
-with tab5:
-    st.markdown("### ⚙️ System Hardware Health & Inference Latency Profiling")
-
-    hw = monitor.get_hardware_metrics()
-
-    col_g1, col_g2, col_g3 = st.columns(3)
-    with col_g1:
-        st.plotly_chart(monitor.create_gauge_chart(hw['cpu_percent'], "CPU Utilization"), use_container_width=True)
-    with col_g2:
-        st.plotly_chart(monitor.create_gauge_chart(hw['ram_percent'], "RAM Utilization"), use_container_width=True)
-    with col_g3:
-        st.markdown(f"""
-        <div class="saas-card" style="height: 180px;">
-            <div class="metric-label">GPU Acceleration & Hardware Memory</div>
-            <div style="margin-top: 15px; font-size: 0.9rem; color: #334155;"><b>GPU Device:</b> <span class="text-blue">{hw['gpu_status']}</span></div>
-            <div style="margin-top: 10px; font-size: 0.9rem; color: #334155;"><b>RAM Used:</b> {hw['ram_used_gb']} GB / {hw['ram_total_gb']} GB</div>
-            <div style="margin-top: 10px; font-size: 0.9rem; color: #334155;"><b>Total Pipeline Latency:</b> <span class="text-emerald">{hw['total_inference_latency']} ms</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.plotly_chart(monitor.create_latency_bar_chart(), use_container_width=True)
-
-    st.markdown("#### 📜 Live System Diagnostic Logs")
-    for log in reversed(monitor.logs[-10:]):
-        st.text(f"[{log['timestamp']}] [{log['level']}] {log['message']}")
-
-st.markdown("---")
-st.caption("© 2026 Woxsen University | SENTINEL-AI Reliability-Aware Multimodal Anomaly Detection Platform | All Rights Reserved.")
+    st.markdown("<hr style='border-top:1px solid #0e0e0e; margin:30px 0 10px 0;'>", unsafe_allow_html=True)
+    st.caption("2026 SENTINEL-AI Research | MIT Licence")

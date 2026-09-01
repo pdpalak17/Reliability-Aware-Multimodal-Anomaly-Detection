@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SENTINEL-AI / Index — Reliability-aware multimodal anomaly detection.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+/* Minimal reset */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;overflow-x:hidden}
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+img,svg{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+::selection{background:currentColor;color:#fff}
+
+:root{
+  --bg:#f4f2eb; --paper:#eae6dc; --ink:#0e0e0e; --rule:#0e0e0e; --warn:#c43a1a; --ok:#1a8a5b;
+}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--ink);font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;line-height:1.5}
+
+/* Hairline grid backdrop */
+.grid-bg{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(14,14,14,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(14,14,14,.05) 1px,transparent 1px);
+  background-size:48px 48px}
+
+main,header,footer{position:relative;z-index:1}
+
+/* Header */
+header{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:24px;padding:12px 24px;border-bottom:1px solid var(--rule);font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:var(--bg)}
+.brand{display:flex;align-items:baseline;gap:6px;font-weight:600;text-transform:none;letter-spacing:-.01em;font-size:18px}
+.brand .slash{color:var(--warn)}
+.brand .v{font-family:'Inter',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.18em;font-weight:500;color:#666;margin-left:8px}
+header nav{display:flex;gap:18px;justify-self:end;color:#666;font-weight:500}
+header nav a:hover{color:var(--ink)}
+header nav a::before{content:"→ "}
+header .id{font-weight:500;color:#666}
+header .id b{color:var(--ink)}
+
+/* Hero with schematic */
+.hero{display:grid;grid-template-columns:380px 1fr;border-bottom:1px solid var(--rule);min-height:78vh}
+.hero-l{padding:48px 32px;border-right:1px solid var(--rule);display:flex;flex-direction:column;justify-content:space-between}
+.hero-l .label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#666;margin-bottom:24px;display:flex;align-items:center;gap:10px}
+.hero-l .label::before{content:"";width:30px;height:1px;background:var(--warn)}
+.hero h1{font-family:'Inter',sans-serif;font-weight:500;font-size:54px;line-height:1.02;letter-spacing:-.025em;margin-bottom:32px;text-wrap:balance}
+.hero h1 em{font-style:italic;color:var(--warn);font-weight:500}
+.hero h1 sup{font-size:.4em;vertical-align:super;color:#666;font-style:normal;font-weight:500;margin-left:.05em}
+.hero p{font-size:14px;line-height:1.55;color:#3a3a3a;font-family:'Inter',sans-serif;max-width:340px;margin-bottom:20px}
+.hero .key-data{margin-top:24px;border-top:1px solid var(--rule);padding-top:20px;display:grid;gap:8px}
+.hero .key-data .r{display:grid;grid-template-columns:120px 1fr auto;gap:14px;padding:6px 0;border-bottom:1px dashed rgba(14,14,14,.18);font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#666}
+.hero .key-data .r b{color:var(--ink);font-weight:600}
+.hero .key-data .r .ok{color:var(--ok)}.hero .key-data .r .w{color:var(--warn)}
+
+.hero-r{padding:32px;background:var(--paper);position:relative;overflow:hidden;display:grid;place-items:center}
+.hero-r .stamp{position:absolute;top:18px;right:24px;border:1px solid var(--rule);padding:6px 12px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;background:var(--paper)}
+.hero-r .stamp b{color:var(--warn)}
+.hero-r .corners{position:absolute;inset:24px;pointer-events:none;border:1px dashed rgba(14,14,14,.18)}
+.hero-r .corners::before,.hero-r .corners::after{content:"";position:absolute;width:10px;height:10px;background:var(--warn);border-radius:50%}
+.hero-r .corners::before{top:-5px;left:-5px}.hero-r .corners::after{bottom:-5px;right:-5px}
+.hero-r .axis-label{position:absolute;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#666}
+.hero-r .ax-top{top:14px;left:48px}
+.hero-r .ax-bot{bottom:8px;right:48px}
+
+/* Architecture schematic (SVG-based, replaces the raster hero image) */
+.arch{width:100%;max-width:760px;aspect-ratio:16/10;position:relative}
+.arch svg{width:100%;height:100%;display:block}
+.arch .arch-cap{position:absolute;bottom:-2px;left:0;right:0;display:flex;justify-content:space-between;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#666;padding:0 4px}
+
+/* Index table */
+.index{padding:48px 24px;border-bottom:1px solid var(--rule)}
+.sec-h{display:grid;grid-template-columns:120px 1fr auto;gap:24px;padding-bottom:14px;border-bottom:1px solid var(--rule);margin-bottom:14px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#666}
+.sec-h h2{font-family:'Inter',sans-serif;font-size:22px;font-weight:500;letter-spacing:-.01em;color:var(--ink);text-transform:none;line-height:1.1}
+.sec-h h2 em{font-style:italic;color:var(--warn)}
+.idx-row{display:grid;grid-template-columns:90px 90px 1.6fr 1fr 90px 90px 30px;gap:14px;padding:12px 0;border-bottom:1px solid rgba(14,14,14,.1);align-items:center;font-size:13px;transition:.2s;cursor:pointer}
+.idx-row:hover{background:rgba(14,14,14,.04);padding-left:8px}
+.idx-row .id{color:#666;font-weight:500}
+.idx-row .ticker{font-weight:600;letter-spacing:.04em}
+.idx-row .name{font-family:'Inter',sans-serif;font-size:15px;font-weight:500;letter-spacing:-.005em}
+.idx-row .sector{color:#3a3a3a;font-size:12px;letter-spacing:.02em}
+.idx-row .stat{text-align:right;font-variant-numeric:tabular-nums}
+.idx-row .stat.up{color:var(--ok)}
+.idx-row .stat.down{color:var(--warn)}
+.idx-row .arr{justify-self:end;color:#666;transition:.2s}
+.idx-row:hover .arr{color:var(--warn);transform:translateX(3px)}
+
+/* Schematic detail */
+.schema{padding:48px 24px;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:1fr 380px;gap:32px;align-items:start}
+.schema .fusion-diagram{aspect-ratio:1;border:1px solid var(--rule);background:var(--paper);position:relative;padding:24px}
+.schema .fusion-diagram svg{width:100%;height:100%;display:block}
+.schema .fusion-diagram .annot{position:absolute;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;background:rgba(244,242,235,.94);border:1px solid var(--rule);max-width:200px;line-height:1.5;z-index:2}
+.schema .fusion-diagram .annot::before{content:"";position:absolute;width:8px;height:8px;border:1px solid var(--warn);border-radius:50%;background:var(--bg)}
+.schema .fusion-diagram .a1{top:14%;left:10%}.schema .fusion-diagram .a1::before{top:-14px;left:24px}
+.schema .fusion-diagram .a2{bottom:18%;right:8%;text-align:right}.schema .fusion-diagram .a2::before{bottom:-14px;right:18px}
+.schema .body h3{font-family:'Inter',sans-serif;font-size:28px;font-weight:500;letter-spacing:-.01em;line-height:1.12;margin-bottom:16px;text-wrap:balance}
+.schema .body h3 em{font-style:italic;color:var(--warn)}
+.schema .body p{font-family:'Inter',sans-serif;font-size:14px;line-height:1.55;color:#3a3a3a;margin-bottom:14px}
+.schema .body .lst{margin-top:24px;padding-top:14px;border-top:1px solid var(--rule)}
+.schema .body .lst .r{display:grid;grid-template-columns:14ch 1fr;padding:8px 0;border-bottom:1px dashed rgba(14,14,14,.18);font-size:12px}
+.schema .body .lst .r b{font-weight:600}
+
+/* Method / process */
+.method{padding:48px 24px;border-bottom:1px solid var(--rule)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--rule);border-right:0;margin-top:18px}
+.step{padding:24px 22px;border-right:1px solid var(--rule);position:relative;background:var(--bg)}
+.step:hover{background:var(--paper)}
+.step .n{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#666;margin-bottom:18px}
+.step .n b{color:var(--warn)}
+.step h4{font-family:'Inter',sans-serif;font-size:18px;font-weight:500;letter-spacing:-.01em;line-height:1.15;margin-bottom:10px}
+.step h4 em{font-style:italic;color:var(--warn)}
+.step p{font-family:'Inter',sans-serif;font-size:13px;line-height:1.55;color:#3a3a3a}
+
+/* Performance table */
+.perf{padding:48px 24px;border-bottom:1px solid var(--rule)}
+.perf-table{width:100%;font-variant-numeric:tabular-nums;border-collapse:collapse;font-size:13px}
+.perf-table th,.perf-table td{padding:12px 16px;border-bottom:1px solid rgba(14,14,14,.15);text-align:right;font-weight:500}
+.perf-table th:first-child,.perf-table td:first-child{text-align:left;font-weight:600}
+.perf-table thead th{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#666;border-bottom:1px solid var(--rule);background:var(--paper)}
+.perf-table .up{color:var(--ok)}
+.perf-table .down{color:var(--warn)}
+.perf-table tr:hover{background:rgba(14,14,14,.04)}
+.perf-table tr.row-bench{font-weight:600;color:#3a3a3a;background:rgba(14,14,14,.03)}
+
+/* CTA */
+.cta{padding:80px 24px;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:1fr auto;gap:48px;align-items:end}
+.cta h2{font-family:'Inter',sans-serif;font-size:64px;font-weight:500;line-height:.98;letter-spacing:-.03em;text-wrap:balance;max-width:820px}
+.cta h2 em{font-style:italic;color:var(--warn)}
+.cta .panel{border:1px solid var(--rule);padding:24px;min-width:300px;background:var(--bg)}
+.cta .panel .lbl{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#666;margin-bottom:8px}
+.cta .panel a{display:block;font-family:'Inter',sans-serif;font-size:16px;font-weight:500;letter-spacing:-.01em;padding:8px 0;border-bottom:1px solid rgba(14,14,14,.15);transition:.2s}
+.cta .panel a:hover{color:var(--warn);padding-left:6px}
+.cta .panel a:last-child{border-bottom:0}
+
+footer{padding:24px;display:grid;grid-template-columns:repeat(6,1fr);gap:18px;font-size:11px;letter-spacing:.04em;color:#666;border-top:1px solid var(--rule)}
+footer h5{color:var(--ink);font-weight:600;letter-spacing:.18em;text-transform:uppercase;margin-bottom:10px}
+footer a{display:block;padding:2px 0;transition:.2s;cursor:pointer}
+footer a:hover{color:var(--warn)}
+footer .b{grid-column:1/3;font-size:13px;line-height:1.5;color:#3a3a3a;max-width:320px}
+footer .b b{display:block;font-family:'Inter',sans-serif;font-weight:500;font-size:18px;color:var(--ink);letter-spacing:-.01em;margin-bottom:10px}
+.copy-foot{grid-column:1/-1;padding-top:18px;margin-top:18px;border-top:1px dashed rgba(14,14,14,.18);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+.reveal{opacity:0;transform:translateY(20px);transition:.6s ease}
+.reveal.in{opacity:1;transform:none}
+
+/* SVG schematic styling */
+.arch svg text, .fusion-diagram svg text{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.04em;fill:#0e0e0e;text-transform:uppercase}
+.arch svg .node{fill:var(--paper);stroke:var(--ink);stroke-width:1}
+.arch svg .node-label{font-weight:600}
+.arch svg .node-dim{font-size:9px;fill:#666;letter-spacing:.08em}
+.arch svg .fuse{fill:var(--bg);stroke:var(--warn);stroke-width:1.4}
+.arch svg .out{fill:var(--ink)}
+.arch svg .out text{fill:var(--bg)}
+.arch svg line, .arch svg path{stroke:var(--ink);stroke-width:1;fill:none}
+.arch svg .warn{stroke:var(--warn)}
+.arch svg .dashed{stroke-dasharray:3 3}
+.arch svg .dot{fill:var(--warn)}
+
+.fusion-diagram svg circle.branch{fill:var(--bg);stroke:var(--ink);stroke-width:1}
+.fusion-diagram svg circle.center{fill:var(--warn);stroke:var(--ink);stroke-width:1}
+.fusion-diagram svg line.spoke{stroke:var(--ink);stroke-width:.8}
+.fusion-diagram svg line.weight{stroke:var(--warn);stroke-width:1.4}
+.fusion-diagram svg polygon.hull{fill:rgba(196,58,26,.10);stroke:var(--warn);stroke-width:1;stroke-dasharray:2 2}
+
+@media(max-width:880px){
+  header{grid-template-columns:1fr auto;padding:12px 16px}
+  header nav,header .id{display:none}
+  .hero{grid-template-columns:1fr}
+  .hero-l{padding:32px 18px;border-right:0;border-bottom:1px solid var(--rule)}
+  .hero h1{font-size:38px}
+  .hero-r{padding:18px;min-height:340px}
+  .hero-r .corners{display:none}
+  .index,.schema,.method,.perf,.cta{padding:36px 18px}
+  .schema{grid-template-columns:1fr;gap:24px}
+  .steps{grid-template-columns:1fr;border-right:1px solid var(--rule);border-bottom:0}
+  .step{border-right:0;border-bottom:1px solid var(--rule)}
+  .step:last-child{border-bottom:0}
+  .idx-row{grid-template-columns:70px 1fr 80px;gap:10px;font-size:12px}
+  .idx-row .sector,.idx-row .ticker,.idx-row .arr,.idx-row .stat:nth-child(6){display:none}
+  .cta{grid-template-columns:1fr}
+  .cta h2{font-size:36px}
+  .perf-table th,.perf-table td{padding:10px 8px;font-size:11px}
+  footer{grid-template-columns:1fr 1fr;padding:24px 18px}
+  footer .b{grid-column:1/-1}
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<header>
+  <span class="brand">SENTINEL<span class="slash">/</span>AI<span class="v">v.1.0 · Q3 2026</span></span>
+  <span></span>
+  <nav><a>Architecture</a><a>Benchmarks</a><a>White paper</a><a>Repository</a></nav>
+  <span class="id">BUILD <b>SNT-AI-1.0.3</b></span>
+</header>
+
+<section class="hero">
+  <div class="hero-l">
+    <div>
+      <div class="label">Research system / Est. 2026</div>
+      <h1>Four sensors,<br>one <em>reliable<sup>°</sup></em> alarm.</h1>
+      <p>SENTINEL-AI is a reliability-aware, context-conditioned surveillance model. It fuses face, pose, motion and scene metadata through a learned attention gate — and drops any signal it can't trust.</p>
+      <p>Every alert is scored by a closed-form objective. Every attribution is written in English. Every incident is logged and grounded against a retrieval index.</p>
+    </div>
+    <div class="key-data">
+      <div class="r"><span>Fusion accuracy</span><b>98.06%</b><span class="ok">↑ 10.6 vs. concat</span></div>
+      <div class="r"><span>Modalities</span><b>4 / 4</b><span>face · pose · video · ctx</span></div>
+      <div class="r"><span>AUC-ROC</span><b>0.99</b><span class="ok">UCF-Crime</span></div>
+      <div class="r"><span>False-alarm rate</span><b>1.9%</b><span>@ optimal T</span></div>
+      <div class="r"><span>Inference</span><b>≈ 42 ms</b><span class="w">CPU only</span></div>
+    </div>
+  </div>
+  <div class="hero-r">
+    <div class="stamp">DOC №<b>SNT-AI-001 / R1</b></div>
+
+    <div class="arch">
+      <svg viewBox="0 0 720 450" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+        <!-- inputs row -->
+        <g>
+          <rect class="node" x="20"  y="30" width="140" height="70"/>
+          <text x="90" y="52" text-anchor="middle" class="node-label">Face CNN</text>
+          <text x="90" y="70" text-anchor="middle" class="node-dim">7 classes · 64-D</text>
+          <text x="90" y="88" text-anchor="middle" class="node-dim">CLAHE + NMS</text>
+
+          <rect class="node" x="190" y="30" width="140" height="70"/>
+          <text x="260" y="52" text-anchor="middle" class="node-label">Pose Net</text>
+          <text x="260" y="70" text-anchor="middle" class="node-dim">33 landmarks · 99-D</text>
+          <text x="260" y="88" text-anchor="middle" class="node-dim">MediaPipe</text>
+
+          <rect class="node" x="360" y="30" width="140" height="70"/>
+          <text x="430" y="52" text-anchor="middle" class="node-label">Video LSTM</text>
+          <text x="430" y="70" text-anchor="middle" class="node-dim">16 × 128 · 2 048-D</text>
+          <text x="430" y="88" text-anchor="middle" class="node-dim">Temporal</text>
+
+          <rect class="node" x="530" y="30" width="170" height="70"/>
+          <text x="615" y="52" text-anchor="middle" class="node-label">Context MLP</text>
+          <text x="615" y="70" text-anchor="middle" class="node-dim">Zone · hour · crowd</text>
+          <text x="615" y="88" text-anchor="middle" class="node-dim">32-D embedding</text>
+        </g>
+
+        <!-- flow lines down to reliability gate -->
+        <line x1="90"  y1="100" x2="90"  y2="150"/>
+        <line x1="260" y1="100" x2="260" y2="150"/>
+        <line x1="430" y1="100" x2="430" y2="150"/>
+        <line x1="615" y1="100" x2="615" y2="150"/>
+
+        <!-- reliability gate -->
+        <rect class="fuse" x="20" y="150" width="680" height="60"/>
+        <text x="360" y="176" text-anchor="middle" class="node-label">Reliability-Aware Attention Gate</text>
+        <text x="360" y="196" text-anchor="middle" class="node-dim">α_face · α_pose · α_video · α_ctx  ∈  [0, 1]</text>
+
+        <!-- alpha labels between input row and gate -->
+        <g class="node-dim">
+          <text x="102" y="128" text-anchor="middle">α_face</text>
+          <text x="272" y="128" text-anchor="middle">α_pose</text>
+          <text x="442" y="128" text-anchor="middle">α_video</text>
+          <text x="627" y="128" text-anchor="middle">α_ctx</text>
+        </g>
+
+        <!-- warn dots on alpha lines -->
+        <circle class="dot" cx="90" cy="135" r="2.5"/>
+        <circle class="dot" cx="260" cy="135" r="2.5"/>
+        <circle class="dot" cx="430" cy="135" r="2.5"/>
+        <circle class="dot" cx="615" cy="135" r="2.5"/>
+
+        <!-- lines to fusion -->
+        <line x1="360" y1="210" x2="360" y2="250"/>
+
+        <!-- fusion block -->
+        <rect class="node" x="130" y="250" width="460" height="60"/>
+        <text x="360" y="276" text-anchor="middle" class="node-label">Context-Aware Attention Fusion  ·  224-D → 5</text>
+        <text x="360" y="296" text-anchor="middle" class="node-dim">Temperature-calibrated softmax  (T = 2.5)</text>
+
+        <!-- to XAI -->
+        <line x1="360" y1="310" x2="360" y2="345"/>
+
+        <!-- Output block -->
+        <rect class="out" x="130" y="345" width="460" height="70"/>
+        <text x="360" y="372" text-anchor="middle" class="node-label">Grounded RAG  ·  SHAP  ·  Plain-English alert</text>
+        <text x="360" y="392" text-anchor="middle" class="node-dim">Normal · Fall · Fighting · Panic · Loitering</text>
+
+        <!-- side note -->
+        <line class="dashed warn" x1="10" y1="180" x2="0" y2="180"/>
+        <text x="8" y="176" class="node-dim" text-anchor="start">α</text>
+      </svg>
+      <div class="arch-cap">
+        <span>FIG. 01 — end-to-end inference schematic</span>
+        <span>scale 1:1 ─ sheet 1 of 3</span>
+      </div>
+    </div>
+
+    <div class="corners"></div>
+  </div>
+</section>
+
+<section class="index">
+  <div class="sec-h">
+    <span>// SECTION 02</span>
+    <h2>Model branches — <em>by contribution.</em></h2>
+    <span>4 branches · 1 fusion</span>
+  </div>
+  <div class="idx-row"><span class="id">001/004</span><span class="ticker">FACE.CNN</span><span class="name">Facial Expression CNN</span><span class="sector">Vision · 7-class emotion · 64-D bottleneck</span><span class="stat">93.40%</span><span class="stat up">+12.2 vs. base</span><span class="arr">→</span></div>
+  <div class="idx-row"><span class="id">002/004</span><span class="ticker">POSE.MP</span><span class="name">Body Pose Landmark Net</span><span class="sector">MediaPipe · 33 keypoints · 99-D</span><span class="stat">92.20%</span><span class="stat up">+7.6 vs. base</span><span class="arr">→</span></div>
+  <div class="idx-row"><span class="id">003/004</span><span class="ticker">VID.LSTM</span><span class="name">Temporal Motion CNN-LSTM</span><span class="sector">Spatio-temporal · 16 × 128</span><span class="stat">97.50%</span><span class="stat up">+16.3 vs. base</span><span class="arr">→</span></div>
+  <div class="idx-row"><span class="id">004/004</span><span class="ticker">CTX.MLP</span><span class="name">Context Metadata Network</span><span class="sector">Zone · hour · illumination · crowd</span><span class="stat">32-D</span><span class="stat up">enabling</span><span class="arr">→</span></div>
+  <div class="idx-row"><span class="id">FUSE</span><span class="ticker">SNT.AI</span><span class="name">Context-Aware Attention Fusion</span><span class="sector">5-class anomaly · 224-D → 5</span><span class="stat">98.06%</span><span class="stat up">+10.6 vs. concat</span><span class="arr">→</span></div>
+  <div class="idx-row"><span class="id">XAI</span><span class="ticker">RAG.KB</span><span class="name">Grounded RAG Alert Engine</span><span class="sector">TF-IDF · SHAP attribution</span><span class="stat">1.4k docs</span><span class="stat up">retrieval@5</span><span class="arr">→</span></div>
+  <div class="idx-row"><span class="id">CV</span><span class="ticker">OCV.MP</span><span class="name">OpenCV + MediaPipe Pipeline</span><span class="sector">Multi-person · Haar + CLAHE + NMS</span><span class="stat">42 ms</span><span class="stat">CPU only</span><span class="arr">→</span></div>
+</section>
+
+<section class="schema">
+  <div class="fusion-diagram">
+    <div class="annot a1"><b>FIG. 02.a</b><br>α weights re-allocate on occlusion</div>
+    <div class="annot a2"><b>FIG. 02.b</b><br>hull area = fused reliability</div>
+    <svg viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+      <!-- concentric guides -->
+      <circle cx="0" cy="0" r="80" fill="none" stroke="#0e0e0e" stroke-opacity=".15" stroke-dasharray="2 2"/>
+      <circle cx="0" cy="0" r="55" fill="none" stroke="#0e0e0e" stroke-opacity=".15" stroke-dasharray="2 2"/>
+      <circle cx="0" cy="0" r="30" fill="none" stroke="#0e0e0e" stroke-opacity=".15" stroke-dasharray="2 2"/>
+
+      <!-- spokes -->
+      <line class="spoke" x1="0" y1="0" x2="0"   y2="-80"/>
+      <line class="spoke" x1="0" y1="0" x2="80"  y2="0"/>
+      <line class="spoke" x1="0" y1="0" x2="0"   y2="80"/>
+      <line class="spoke" x1="0" y1="0" x2="-80" y2="0"/>
+
+      <!-- weight arms (α) -->
+      <line class="weight" x1="0" y1="0" x2="0"   y2="-68"/>
+      <line class="weight" x1="0" y1="0" x2="55"  y2="0"/>
+      <line class="weight" x1="0" y1="0" x2="0"   y2="72"/>
+      <line class="weight" x1="0" y1="0" x2="-42" y2="0"/>
+
+      <!-- reliability hull -->
+      <polygon class="hull" points="0,-68 55,0 0,72 -42,0"/>
+
+      <!-- branch nodes -->
+      <circle class="branch" cx="0"   cy="-80" r="8"/>
+      <circle class="branch" cx="80"  cy="0"   r="8"/>
+      <circle class="branch" cx="0"   cy="80"  r="8"/>
+      <circle class="branch" cx="-80" cy="0"   r="8"/>
+
+      <!-- center -->
+      <circle class="center" cx="0" cy="0" r="6"/>
+
+      <!-- labels -->
+      <text x="0"   y="-88" text-anchor="middle">FACE</text>
+      <text x="90"  y="4"   text-anchor="start">POSE</text>
+      <text x="0"   y="94"  text-anchor="middle">VIDEO</text>
+      <text x="-90" y="4"   text-anchor="end">CTX</text>
+
+      <!-- alpha values -->
+      <text x="6"   y="-44" fill="#c43a1a">α=.85</text>
+      <text x="30"  y="-6"  fill="#c43a1a">α=.69</text>
+      <text x="6"   y="52"  fill="#c43a1a">α=.90</text>
+      <text x="-38" y="-6"  fill="#c43a1a" text-anchor="end">α=.52</text>
+    </svg>
+  </div>
+  <div class="body">
+    <div class="label" style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#666;margin-bottom:18px;display:flex;align-items:center;gap:10px">// SECTION 03 — method</div>
+    <h3>One <em>gate,</em> one <em>fusion,</em> one written objective.</h3>
+    <p>SENTINEL-AI does not run an ensemble of tricks. It runs a single, written process. Every branch emits an embedding and a self-reported reliability score. The attention gate closes over anything it can't trust — occluded faces, missing landmarks, black frames — and re-normalises the rest.</p>
+    <p>The fusion head is temperature-calibrated so the anomaly probability is a probability, not a rank. When it fires, the RAG engine grounds the alert against 1 400 historical incidents and SHAP explains, in English, which modality carried the decision.</p>
+    <div class="lst">
+      <div class="r"><b>Input space</b><span>Face 64 · Pose 99 · Video 2 048 · Ctx 32</span></div>
+      <div class="r"><b>Fusion head</b><span>224-D → 5-class · softmax · T = 2.5</span></div>
+      <div class="r"><b>Reliability</b><span>Learned α ∈ [0,1] per branch, per frame</span></div>
+      <div class="r"><b>Grounding</b><span>TF-IDF · scikit-learn · 1 428 incident KB</span></div>
+      <div class="r"><b>Deployment</b><span>Docker · Streamlit · Gradio · HF ZeroGPU</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="method">
+  <div class="sec-h">
+    <span>// SECTION 04</span>
+    <h2>How the frame becomes an <em>alert.</em></h2>
+    <span>Four steps · per frame</span>
+  </div>
+  <div class="steps">
+    <div class="step"><div class="n">STEP <b>1</b></div><h4>Read the <em>scene</em></h4><p>OpenCV runs multi-scale Haar cascades with CLAHE and NMS on every frame; MediaPipe emits 33 3-D pose landmarks; scene metadata is normalised against the zone baseline.</p></div>
+    <div class="step"><div class="n">STEP <b>2</b></div><h4>Weight the <em>evidence</em></h4><p>Each branch reports an embedding and a reliability α. Occluded faces and dropped keypoints self-report low α and are demoted — never silently trusted.</p></div>
+    <div class="step"><div class="n">STEP <b>3</b></div><h4>Fuse &amp; <em>calibrate</em></h4><p>The 224-D concatenated vector passes the attention head. Temperature scaling produces a genuine 5-class anomaly probability across Normal, Fall, Fighting, Panic and Loitering.</p></div>
+    <div class="step"><div class="n">STEP <b>4</b></div><h4>Ground &amp; <em>explain</em></h4><p>If risk crosses threshold, TF-IDF retrieves the 5 nearest historical incidents. SHAP names the modalities that carried the alarm. The alert is written in one sentence of English.</p></div>
+  </div>
+</section>
+
+<section class="perf">
+  <div class="sec-h">
+    <span>// SECTION 05</span>
+    <h2>Benchmarked, <em>audited.</em></h2>
+    <span>UCF-Crime · MPII Pose · FER-2013</span>
+  </div>
+  <table class="perf-table">
+    <thead><tr><th>Framework / branch</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>AUC-ROC</th></tr></thead>
+    <tbody>
+      <tr><td>Single-modality Face CNN</td><td>81.2%</td><td>79.5%</td><td>80.1%</td><td>79.8%</td><td>0.84</td></tr>
+      <tr><td>Single-modality Body Pose Net</td><td>84.6%</td><td>83.2%</td><td>84.0%</td><td>83.6%</td><td>0.87</td></tr>
+      <tr><td>Video Temporal CNN-LSTM</td><td>97.5%</td><td>96.9%</td><td>97.2%</td><td>97.0%</td><td>0.98</td></tr>
+      <tr><td>Unweighted concatenation baseline</td><td>87.5%</td><td>86.1%</td><td>86.9%</td><td>86.5%</td><td>0.90</td></tr>
+      <tr><td>Late-fusion voting (majority)</td><td>89.1%</td><td>88.4%</td><td>88.7%</td><td>88.5%</td><td>0.92</td></tr>
+      <tr><td>Fixed-weight attention (α = 0.25)</td><td>91.3%</td><td>90.6%</td><td>90.9%</td><td>90.7%</td><td>0.94</td></tr>
+      <tr><td>Ablation · without reliability gate</td><td>94.2%</td><td>93.7%</td><td>93.9%</td><td>93.8%</td><td>0.96</td></tr>
+      <tr><td>Ablation · without RAG grounding</td><td>97.8%</td><td>97.4%</td><td>97.6%</td><td>97.5%</td><td>0.98</td></tr>
+      <tr class="row-bench"><td>Proposed SENTINEL-AI Fusion Engine</td><td class="up">+ 98.1%</td><td class="up">+ 97.8%</td><td class="up">+ 98.0%</td><td class="up">+ 97.9%</td><td class="up">0.99</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="cta">
+  <h2>Four sensors. <em>One reliable</em> alarm. No black boxes.</h2>
+  <div class="panel">
+    <div class="lbl">→ Read &amp; run</div>
+    <a href="#">Clone the GitHub repository</a>
+    <a href="#">Launch the Streamlit dashboard</a>
+    <a href="#">Try the Gradio demo (HF ZeroGPU)</a>
+    <a href="#">Read SNT-AI-001 white paper (PDF)</a>
+  </div>
+</section>
+
+<footer>
+  <div class="b"><b>SENTINEL-AI Research</b>A reliability-aware, context-conditioned multimodal anomaly detection framework. Open-source under MIT. Reproduced against UCF-Crime, MPII Pose &amp; FER-2013.</div>
+  <div><h5>Model</h5><a>Face branch</a><a>Pose branch</a><a>Video branch</a><a>Attention fusion</a></div>
+  <div><h5>System</h5><a>Inference engine</a><a>Video processor</a><a>Incident logger</a><a>System monitor</a></div>
+  <div><h5>Docs</h5><a>White paper</a><a>API reference</a><a>Dockerfile</a><a>Test suite</a></div>
+  <div><h5>Reach</h5><a>research@sentinel-ai</a><a>GitHub · Issues</a><a>Hugging Face</a><a>Cite (BibTeX)</a></div>
+  <div class="copy-foot"><span>© 2026 SENTINEL-AI Research — MIT licence. Built on Streamlit, OpenCV, MediaPipe &amp; scikit-learn.</span><span>Method · Benchmarks · Reproducibility · Ethics statement</span></div>
+</footer>
+
+<script>
+const io=new IntersectionObserver(es=>es.forEach(e=>e.isIntersecting&&e.target.classList.add('in')),{threshold:.08});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>
